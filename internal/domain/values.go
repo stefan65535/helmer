@@ -78,6 +78,8 @@ func resolveValueRefs(nodes map[string]any) error {
 							return fmt.Errorf(`error evaluating reference "%v": %v`, ref, err)
 						}
 						nodes[i] = val
+					} else {
+						return errors.New(`$ref field only supports URI fragments pointing to local values`)
 					}
 				} else {
 					return errors.New(`$ref field must have string type`)
