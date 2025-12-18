@@ -37,9 +37,9 @@ This 'Git as the target' approach also lets us utilize the branching capabilitie
 Run
 ```helmer --help```
 
-### Configuration file
+## Configuration file
 
-#### includes
+### includes
 
 The includes element contains a list of path references to other configuration files.
 
@@ -47,7 +47,7 @@ The includes element contains a list of path references to other configuration f
 
 Included configuration files are limited to contain includes, charts, values, capabilities, and release directives.
 
-#### charts
+### charts
 
 A Chart references a Helm chart.
 
@@ -63,11 +63,11 @@ charts:
       Colour: Yellow
 ```
 
-#### Helm objects
+### Helm objects
 
 Helm objects correspond to the Helm built-in objects as described by [Helm Built-in Objects](https://helm.sh/docs/chart_template_guide/builtin_objects)
 
-##### values
+#### values
 
 Values declare a set of global values that can be used for all charts. Any YAML valid as Helm values can be put here.
 
@@ -78,7 +78,32 @@ values:
   Colour: Blue
 ```
 
-###### $file reference
+##### $ref
+
+A value node can contain a reference to another value through the $ref notation.
+This is useful when working with third party charts where you can't change the value names in a chart but still want to use values already present in your value set. It also gives you the option to design your own charts that are unaware of your global values structure in the Helmer config and insteed name charts fields after there location or function in the chart.
+
+The value of $ref uses the [JSON Pointer notation](https://tools.ietf.org/html/rfc6901). It is however limited to to URI fragments, i.e. it must start with a `#`.
+
+References are resolved after all includes are processed. This lets you reference a field in a document anywher in the include tree.
+
+Example:
+Lets assume you hace a chart with a value field called FavouriteColor. You could introduce a value field with that name directly but perhaps tehre is already field in your Helmer config that plays the role of a favourite colour. Instead of changing your chart template a $ref in the FavouriteColor field will pick it upp for you.
+
+```yaml
+charts:
+  - path: "../../charts/mychart"
+    values:
+      FavouriteColor:
+        $ref: "#/Colour"
+```
+
+```yaml
+values:
+  Colour: Blue
+```
+
+##### $file reference
 
 A value node can contain a file reference by using the syntax $file.
 
@@ -92,7 +117,102 @@ This will convert the node to a scalar whose value is the content of the file.
 
 Helm also has the ability to reference files from a chart. However, it is limited to files placed within the Chart. A Helmer $file reference on the other hand can reference any file on the host.
 
-##### capabilities
+##### patches
+
+Patches are applied to rendered Kubernetes manifests using JSON Patch (RFC 6902). Each patch entry must identify which rendered resources it should target and then provide a JSON Patch array of operations. Typical selection fields are:
+
+- kind — the Kubernetes Kind (e.g., Deployment, Service)
+- name — metadata.name of the resource
+- namespace — metadata.namespace (optional)
+- apiVersion — apiVersion of the resource (optional)
+- labels — a map of labels to match (optional, matches resources that contain all specified label keys/values)
+
+A patch entry that matches multiple resources will be applied to each matching resource.
+
+Patch structure
+
+A patch entry under a chart looks like:
+
+```yaml
+charts:
+  - path: charts/myapp
+    patches:
+      - target:
+          kind: Deployment
+          name: myapp
+        patch:
+          - op: replace
+            path: /spec/template/spec/containers/0/image
+            value: myrepo/myapp:1.2
+```
+
+Notes:
+
+- The "patch" field is a JSON Patch array (list of objects with op, path, and optionally value).
+- Paths are JSON Pointer strings (RFC 6901). Use ~1 to escape slashes and ~0 to escape tildes inside key names (for example, the annotation key "helm.sh/managed-by" becomes "helm.sh~1managed-by" in the pointer).
+- Operations supported by RFC 6902 (add, remove, replace, move, copy, test) are accepted.
+- Values in a patch operation can be scalars, objects, arrays, or special Helmer references ($ref), see below.
+
+Examples
+
+1) Replace container image
+
+```yaml
+- target:
+    kind: Deployment
+    name: myapp
+  patch:
+    - op: replace
+      path: /spec/template/spec/containers/0/image
+      value: myrepo/myapp:1.2.3
+```
+
+2) Add an annotation (note escaped slash)
+
+```yaml
+- target:
+    kind: Service
+    name: my-service
+  patch:
+    - op: add
+      path: /metadata/annotations/helm.sh~1managed-by
+      value: helmer
+```
+
+4) Reuse a value from your configuration via $ref
+
+```yaml
+values:
+  image: "myrepo/myapp:1.2.3"
+
+charts:
+  - path: charts/myapp
+    patches:
+      - selection:
+          kind: Deployment
+          name: myapp
+        patch:
+          - op: replace
+            path: /spec/template/spec/containers/0/image
+            value:
+              $ref: values.image # resolves to "myrepo/myapp:1.2.3"
+```
+
+Behavior and best practices
+
+- Patches are applied after Helm template rendering and before writing manifests to the target.
+- Patches are applied in the order they appear. If multiple patches target the same path, later patches overwrite earlier ones.
+- JSON Pointer array indices are position-based; using array indices can be fragile if upstream charts reorder array elements. When possible, prefer changing chart values or replacing larger subtrees instead of relying on numeric array indices.
+- If a replace/remove operation targets a missing path, the patch will fail. Use add to create missing fields, but be aware add inserts into arrays by index and will not implicitly create intermediate objects.
+- For complex structural changes (especially in arrays) prefer adjusting Helm values or adding a new rendered manifest instead of fragile index-based patches.
+
+Error handling
+
+- If a patch fails (invalid path or operation), Helmer will surface an error for that chart/rendering step. Test patches locally against rendered output to validate pointer paths and operations before adding them to a pipeline.
+
+This should give you the tools to target individual rendered resources and apply precise JSON Patch edits while still using $ref to keep patches data-driven and reusable.
+
+#### capabilities
 
 This provides information about what capabilities the Kubernetes cluster supports.
 
@@ -103,7 +223,7 @@ As Helmer doesn't talk to your Kubernetes cluster, Helmer can't extract informat
 - `kubeVersion.major:` Sets the Capabilities.KubeVersion.Major.
 - `kubeVersion.minor:` Sets the Capabilities.KubeVersion.Minor.
 
-##### release
+#### release
 
 Sets various attributes in the Helm built-in object `.Release`.
 
@@ -117,7 +237,7 @@ release:
   namespace: mynamespace
 ```
 
-#### target
+### target
 
 A target directive controls the generation of manifests from the defined set of charts and Helm objects in the configuration.
 
@@ -130,10 +250,10 @@ target:
   path: write/manifests/to/this/file
 ```
 
-### Priority order for values
+## Priority order for values
 
 Values can be set as globals or in a chart. There are also the built-in value defaults in Helm charts themselves. Priority among these is: Chart > Globals > Chart defaults. Global values included from another configuration will have lower priority than those in the including configuration.
 
-## License
+# License
 
 Helmer is released under the Apache 2.0 license. See [LICENSE](LICENSE)
