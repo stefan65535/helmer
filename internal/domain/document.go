@@ -72,6 +72,10 @@ func (d *Document) ResolveDependencies(path string) error {
 		return err
 	}
 
+	if err := d.Values.ResolveValueFileAndExternalRefs(stdpath.Dir(path)); err != nil  {
+		return err
+	}
+
 	return nil
 }
 
@@ -114,23 +118,6 @@ func (d *Document) CollectCharts() []*Chart {
 	}
 
 	return charts
-}
-
-func (d *Document) ResolveChartValueFileAndExternalRefs(path string) error {
-	for _, chart := range d.Charts {
-		if err := chart.Values.ResolveValueFileAndExternalRefs(path); err != nil {
-			return err
-		}
-	}
-
-	for _, include := range d.Includes {
-		if err := include.loadedDocument.ResolveChartValueFileAndExternalRefs(path); err != nil {
-
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (d *Document) ResolveChartValueRefs() error {

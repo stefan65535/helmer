@@ -60,16 +60,6 @@ func processConfig(path string) error {
 		return err
 	}
 
-	err = domain.GlobalValues.ResolveValueFileAndExternalRefs(path)
-	if err != nil {
-		return err
-	}
-
-	err = doc.ResolveChartValueFileAndExternalRefs(path)
-	if err != nil {
-		return err
-	}
-
 	err = domain.GlobalValues.ResolveValueRefs()
 	if err != nil {
 		return err
