@@ -98,11 +98,13 @@ func (d *Document) resolveIncludes(basePath string) error {
 	return nil
 }
 
-func (d *Document) loadCharts(configPath string) error {
+func (d *Document) loadCharts(path string) error {
 	for _, chart := range d.Charts {
-		if err := chart.load(configPath); err != nil {
+		if err := chart.load(path); err != nil {
 			return err
 		}
+
+		chart.Values.ResolveValueFileAndExternalRefs(path)
 	}
 
 	return nil
