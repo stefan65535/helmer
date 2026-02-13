@@ -16,6 +16,7 @@ type Chart struct {
 	Path    string   `yaml:"path"`
 	Patches []*Patch `yaml:"patches"`
 	Values  Values   `yaml:"values"`
+	Release Release  `yaml:"release,omitempty"`
 
 	ConfigPath string `yaml:"-"` // TODO What is this?
 
@@ -71,8 +72,16 @@ func (c *Chart) render(values map[string]any) (*releasev1.Release, error) {
 
 	install := action.NewInstall(&cfg)
 	install.DryRunStrategy = action.DryRunClient
-	install.ReleaseName = GlobalRelease.Name
-	install.Namespace = GlobalRelease.Namespace
+	if c.Release.Name != "" {
+		install.ReleaseName = c.Release.Name
+	} else {
+		install.ReleaseName = GlobalRelease.Name
+	}
+	if c.Release.Namespace != "" {
+		install.Namespace = c.Release.Namespace
+	} else {
+		install.Namespace = GlobalRelease.Namespace
+	}
 
 	localValues := loader.MergeMaps(values, c.Values)
 

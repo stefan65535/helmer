@@ -241,6 +241,8 @@ release:
   namespace: mynamespace
 ```
 
+release can be set as a global directive and on chart basis. If both are set the chart will override the global value.
+
 ### target
 
 A `target` directive controls the generation of manifests from the defined set of charts and Helm objects in the configuration.
