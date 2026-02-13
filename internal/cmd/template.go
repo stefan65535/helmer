@@ -70,6 +70,12 @@ func processConfig(path string) error {
 		return err
 	}
 
+	domain.GlobalValues["Helmer"] = map[string]any{
+		"target": map[string]any{
+			"path": doc.Target.Path,
+		},
+	}
+
 	err = doc.RenderTarget()
 	if err != nil {
 		return err

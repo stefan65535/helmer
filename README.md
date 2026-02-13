@@ -256,6 +256,22 @@ target:
   path: write/manifests/to/this/file
 ```
 
+## Helmer values
+
+Helmer values are added to the global .Values in Helm under .Values.Helmer
+Currently only target.path is available
+Example:
+
+Some chart:
+
+```yaml
+... som k8s kind
+spec:
+  path: {{ .Values.Helmer.target.path }}
+```
+
+This can be useful in, for example, en ArgoCD applications that needs to reference the target path in a repository with freshly generated manifests.
+
 ## Priority order for values
 
 Values can be set as globals or in a chart. There are also the built-in value defaults in Helm charts themselves. Priority among these is: Chart > Globals > Chart defaults. Global values included from another configuration will have lower priority than those in the including configuration.
