@@ -134,7 +134,7 @@ func resolveValueFileAndExternalRefs(nodes map[string]any, basePath string) erro
 
 					bytes, err := os.ReadFile(path)
 					if err != nil {
-						return err
+						return fmt.Errorf("resolving $file relative to path %v failed. Cause: %v", basePath, err)
 					}
 					nodes[k] = string(bytes)
 				} else {

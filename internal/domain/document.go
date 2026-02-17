@@ -72,7 +72,7 @@ func (d *Document) ResolveDependencies(path string) error {
 		return err
 	}
 
-	if err := d.Values.ResolveValueFileAndExternalRefs(stdpath.Dir(path)); err != nil  {
+	if err := d.Values.ResolveValueFileAndExternalRefs(stdpath.Dir(path)); err != nil {
 		return err
 	}
 
@@ -104,7 +104,9 @@ func (d *Document) loadCharts(path string) error {
 			return err
 		}
 
-		chart.Values.ResolveValueFileAndExternalRefs(path)
+		if err := chart.Values.ResolveValueFileAndExternalRefs(path); err != nil {
+			return err
+		}
 	}
 
 	return nil
