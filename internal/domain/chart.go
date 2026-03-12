@@ -18,8 +18,6 @@ type Chart struct {
 	Values  Values   `yaml:"values"`
 	Release Release  `yaml:"release,omitempty"`
 
-	ConfigPath string `yaml:"-"` // TODO What is this?
-
 	loadedChart *chartv2.Chart
 }
 
@@ -31,8 +29,6 @@ type RenderedChart struct {
 var chartCash = make(map[string]*chartv2.Chart)
 
 func (c *Chart) load(configPath string) error {
-	c.ConfigPath = configPath
-
 	if c.loadedChart == nil {
 		absPath, err := filepath.Abs(stdpath.Join(configPath, c.Path))
 		if err != nil {
