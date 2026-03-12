@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	stdpath "path"
+	"path/filepath"
 
 	"github.com/go-openapi/jsonreference"
 	"github.com/goccy/go-yaml"
@@ -139,6 +140,57 @@ func resolveValueFileAndExternalRefs(nodes map[string]any, basePath string) erro
 					nodes[k] = string(bytes)
 				} else {
 					return errors.New(`$file field must have string value`)
+				}
+			}
+
+			if childNode, ok := mapNode["$files"]; ok {
+				if fileNodes, ok := childNode.([]any); ok {
+					var result []string
+
+					for _, fileNode := range fileNodes {
+						if fileMapNode, ok := fileNode.(map[string]any); ok {
+							if pathNode, ok := fileMapNode["path"]; ok {
+								if path, ok := pathNode.(string); ok {
+									absPath := stdpath.Join(basePath, path)
+
+									bytes, err := os.ReadFile(absPath)
+									if err != nil {
+										return fmt.Errorf("resolving $files relative to path %v failed. Cause: %v", basePath, err)
+									}
+									result = append(result, string(bytes))
+								} else {
+									return errors.New(`path field in $files must have string value`)
+								}
+							} else if globNode, ok := fileMapNode["glob"]; ok {
+								if glob, ok := globNode.(string); ok {
+									absGlob := stdpath.Join(basePath, glob)
+
+									matches, err := filepath.Glob(absGlob)
+									if err != nil {
+										return fmt.Errorf("resolving glob in $files relative to path %v failed. Cause: %v", basePath, err)
+									}
+
+									for _, match := range matches {
+										bytes, err := os.ReadFile(match)
+										if err != nil {
+											return fmt.Errorf("resolving $files relative to path %v failed. Cause: %v", basePath, err)
+										}
+										result = append(result, string(bytes))
+									}
+								} else {
+									return errors.New(`glob field in $files must have string value`)
+								}
+							} else {
+								return errors.New(`each entry in $files must contain either a path field or a glob field`)
+							}
+						} else {
+							return errors.New(`each entry in $files must be an object`)
+						}
+					}
+
+					nodes[k] = result
+				} else {
+					return errors.New(`$files field must have array value`)
 				}
 			}
 

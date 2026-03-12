@@ -121,6 +121,29 @@ This will convert the node to a scalar whose value is the content of the file.
 
 Helm can reference files from a chart, but it is limited to files placed within the chart. A Helmer `$file` reference, on the other hand, can reference any file on the host.
 
+##### $files reference
+
+A value node can contain an array of file references by using the `$files` syntax. The result is an array of strings. One for the content of each file.
+
+The file references can be expressed as absolut `path:` elements or `glob:` elements. Globing uses the Go Match syntax, [filepath.Match](https://pkg.go.dev/path/filepath#Match)
+
+```yaml
+values:
+  Colours:
+    $files: 
+      - path: ../files/favouriteColour.txt
+      - path: ../files/uglyColour.txt
+      - path: ../files/allColours/*.txt
+```
+
+Here is an example how to render all colours in a template:
+
+```yaml
+{{- range .Values.Colours }}
+    {{ . }}
+{{- end }}  
+```
+
 ##### patches
 
 Patches are applied to rendered Kubernetes manifests using JSON Patch (RFC 6902). Each patch entry must identify which rendered resources it should target and then provide a JSON Patch array of operations. Typical selection fields are:
