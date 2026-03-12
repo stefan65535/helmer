@@ -56,6 +56,7 @@ A chart references a Helm chart.
 
 - `path`: Where to find the chart. Currently, only local charts are supported.
 - `values`: Values to set for this chart. Any YAML valid in a Helm values.yaml file can be placed here and will override the chart's built-in defaults.
+- `targetName`: Set the target file name. If not set the chart name will be used.
 
 Example:
 

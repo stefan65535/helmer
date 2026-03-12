@@ -17,6 +17,7 @@ type Chart struct {
 	Patches []*Patch `yaml:"patches"`
 	Values  Values   `yaml:"values"`
 	Release Release  `yaml:"release,omitempty"`
+	TargetName    string   `yaml:"targetName,omitempty"`
 
 	loadedChart *chartv2.Chart
 }
@@ -90,6 +91,11 @@ func (c *Chart) render(values map[string]any) (*releasev1.Release, error) {
 
 	if err = applyPatches(release, c.Patches, localValues); err != nil {
 		return nil, err
+	}
+
+	// TODO probably should wrap relase in a struct and add a field for the target name instead of mutating the release name here. This is because the release struct is meant to represent a Helm release and having a field that is not part of the Helm release spec can be confusing. Also, if we want to add more fields in the future that are not part of the Helm release spec, it would be cleaner to have a separate struct for our internal representation of a rendered chart that can include additional fields as needed.	
+	if c.TargetName != "" {
+		release.Chart.Metadata.Name = c.TargetName
 	}
 
 	return release, nil
