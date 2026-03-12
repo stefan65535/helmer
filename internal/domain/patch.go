@@ -1,8 +1,10 @@
 package domain
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-openapi/jsonreference"
 	"github.com/goccy/go-yaml"
@@ -15,73 +17,81 @@ type Patch struct {
 	PatchJSON6902 yamlpatch.Patch `yaml:"patch"` // Note: yamlpatch.Patch is a slice of yamlpatch.Operation.
 }
 
-func (p *Patch) Apply(manifest string, values map[string]any) (string, error) {
-	var yamlManifest map[string]any
+func (p *Patch) Apply(manifests string, values map[string]any) (string, error) {
+	result := bytes.NewBuffer(make([]byte, 0, len(manifests)))
 
-	err := yaml.Unmarshal([]byte(manifest), &yamlManifest)
-	if err != nil {
-		return "", err
-	}
+	docs := splitYAMLDocuments(manifests)
+	for _, doc := range docs {
+		result.WriteString("---\n")
 
-	matched, err := isFragmentInManifest(yamlManifest, p.Target)
-	if err != nil {
-		return "", err
-	}
-
-	if matched {
-		var deReferencedPatch yamlpatch.Patch
-
-		for _, operation := range p.PatchJSON6902 {
-			if mapNode, ok := operation.Value.(map[string]any); ok {
-				if childNode, ok := mapNode["$ref"]; ok {
-					if ref, ok := childNode.(string); ok {
-						r, err := jsonreference.New(ref)
-						if err != nil {
-							return "", err
-						}
-
-						if r.HasFragmentOnly {
-							val, _, err := r.GetPointer().Get(values)
-							if err != nil {
-								return "", fmt.Errorf(`error evaluating reference "%v": %v`, ref, err)
-							}
-
-							deReferencedOperation := yamlpatch.Operation{
-								Type:    operation.Type,
-								Path:    operation.Path,
-								From:    operation.From,
-								Value:   val,
-								Comment: operation.Comment,
-							}
-
-							deReferencedPatch = append(deReferencedPatch, deReferencedOperation)
-						} else {
-							return "", errors.New(`$ref field in patch only supports /# style references`)
-						}
-					} else {
-						return "", errors.New(`$ref field must have string type`)
-					}
-				}
-			} else {
-				deReferencedPatch = append(deReferencedPatch, operation)
-			}
-		}
-
-		patchedManifest, err := yamlpatch.Apply([]byte(manifest), deReferencedPatch)
+		var yamlManifest map[string]any
+		err := yaml.Unmarshal(doc, &yamlManifest)
 		if err != nil {
 			return "", err
 		}
-		manifest = string(patchedManifest)
 
+		matched, err := isTargetInManifest(yamlManifest, p.Target)
+		if err != nil {
+			return "", err
+		}
+
+		if matched {
+			var deReferencedPatch yamlpatch.Patch
+
+			for _, operation := range p.PatchJSON6902 {
+				if mapNode, ok := operation.Value.(map[string]any); ok {
+					if childNode, ok := mapNode["$ref"]; ok {
+						if ref, ok := childNode.(string); ok {
+							r, err := jsonreference.New(ref)
+							if err != nil {
+								return "", err
+							}
+
+							if r.HasFragmentOnly {
+								val, _, err := r.GetPointer().Get(values)
+								if err != nil {
+									return "", fmt.Errorf(`error evaluating reference "%v": %v`, ref, err)
+								}
+
+								deReferencedOperation := yamlpatch.Operation{
+									Type:    operation.Type,
+									Path:    operation.Path,
+									From:    operation.From,
+									Value:   val,
+									Comment: operation.Comment,
+								}
+
+								deReferencedPatch = append(deReferencedPatch, deReferencedOperation)
+							} else {
+								return "", errors.New(`$ref field in patch only supports /# style references`)
+							}
+						} else {
+							return "", errors.New(`$ref field must have string type`)
+						}
+					}
+				} else {
+					deReferencedPatch = append(deReferencedPatch, operation)
+				}
+			}
+
+			patchedDoc, err := yamlpatch.Apply(doc, deReferencedPatch)
+			if err != nil {
+				return "", err
+			}
+
+			result.Write(patchedDoc)
+		} else {
+			result.Write(doc)
+		}
 	}
 
-	// TODO add warning if no match was found
+	// TODO check expected target value exists in the patched document and throw an error if not. This is to prevent silent failures where the patch is applied to the wrong document because the target selector is too broad or the template has changes unexpectedly.
 
-	return manifest, nil
+	return result.String(), nil
 }
 
-// isFragmentInManifest checks if the fragment exists in the document at root level.
-func isFragmentInManifest(document map[string]any, fragment map[string]any) (bool, error) {
+// isTargetInManifest checks if the fragment exists in the document at root level.
+func isTargetInManifest(document map[string]any, fragment map[string]any) (bool, error) {
 	changelog, err := diff.Diff(fragment, document)
 	if err != nil {
 		return false, err
@@ -96,4 +106,23 @@ func isFragmentInManifest(document map[string]any, fragment map[string]any) (boo
 	}
 
 	return true, nil
+}
+
+// splitYAMLDocuments splits a YAML string into separate documents based on the document separator "---".
+func splitYAMLDocuments(yamlContent string) [][]byte {
+	var docs [][]byte
+
+	lines := strings.SplitSeq(yamlContent, "\n")
+	for line := range lines {
+		if line == "---" {
+			docs = append(docs, []byte{})
+		} else {
+			if len(docs) == 0 {
+				docs = append(docs, []byte{})
+			}
+			docs[len(docs)-1] = append(docs[len(docs)-1], []byte(line+"\n")...)
+		}
+	}
+
+	return docs
 }
