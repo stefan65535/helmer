@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/spf13/cobra"
 )
@@ -28,13 +29,13 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 }
 
-var version string
-
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number",
 	Long:  `All software has versions. This is mine`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(version)
+		buildInfo, _ := debug.ReadBuildInfo()
+
+		fmt.Println(buildInfo.Main.Version)
 	},
 }
