@@ -149,43 +149,37 @@ func resolveValueFileAndExternalRefs(nodes map[string]any, basePath string) erro
 
 					for _, fileNode := range fileNodes {
 						if fileMapNode, ok := fileNode.(map[string]any); ok {
-							if pathNode, ok := fileMapNode["path"]; ok {
-								if path, ok := pathNode.(string); ok {
-									absPath := stdpath.Join(basePath, path)
-
-									bytes, err := os.ReadFile(absPath)
-									if err != nil {
-										return fmt.Errorf("resolving $files relative to path %v failed. Cause: %v", basePath, err)
-									}
-									result = append(result, string(bytes))
-								} else {
-									return errors.New(`path field in $files must have string value`)
+							for key := range fileMapNode {
+								if key != "path" {
+									return fmt.Errorf(`each entry in $files must contain only a path field, got: %v`, key)
 								}
-							} else if globNode, ok := fileMapNode["glob"]; ok {
-								if glob, ok := globNode.(string); ok {
-									absGlob := stdpath.Join(basePath, glob)
+							}
+							if pathNode, ok := fileMapNode["path"]; ok {
+								if relPath, ok := pathNode.(string); ok {
+									path := stdpath.Join(basePath, relPath)
 
-									matches, err := filepath.Glob(absGlob)
+									files, err := filepath.Glob(path)
 									if err != nil {
-										return fmt.Errorf("resolving glob in $files relative to path %v failed. Cause: %v", basePath, err)
+										return fmt.Errorf("resolving path %v failed. Cause: %v", path, err)
 									}
 
-									for _, match := range matches {
-										bytes, err := os.ReadFile(match)
+									for _, file := range files {
+										bytes, err := os.ReadFile(file)
 										if err != nil {
-											return fmt.Errorf("resolving $files relative to path %v failed. Cause: %v", basePath, err)
+											return fmt.Errorf("reading file %v failed. Cause: %v", file, err)
 										}
 										result = append(result, string(bytes))
 									}
 								} else {
-									return errors.New(`glob field in $files must have string value`)
+									return errors.New(`path field in $files must have string value`)
 								}
 							} else {
-								return errors.New(`each entry in $files must contain either a path field or a glob field`)
+								return errors.New(`each entry in $files must contain a path field`)
 							}
 						} else {
 							return errors.New(`each entry in $files must be an object`)
 						}
+
 					}
 
 					nodes[k] = result

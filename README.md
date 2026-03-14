@@ -64,7 +64,7 @@ Example:
 charts:
   - path: path/to/my/helm/chart
     values:
-      Colour: Yellow
+      colour: Yellow
 ```
 
 ### Helm objects
@@ -79,7 +79,7 @@ Example:
 
 ```yaml
 values:
-  Colour: Blue
+  colour: Blue
 ```
 
 ##### $ref
@@ -98,13 +98,13 @@ Let's assume you have a chart with a value field called `FavouriteColor`. You co
 charts:
   - path: "../../charts/mychart"
     values:
-      FavouriteColor:
-        $ref: "#/Colour"
+      favouriteColor:
+        $ref: "#/colour"
 ```
 
 ```yaml
 values:
-  Colour: Blue
+  colour: Blue
 ```
 
 ##### $file reference
@@ -113,7 +113,7 @@ A value node can contain a file reference by using the `$file` syntax.
 
 ```yaml
 values:
-  Colour:
+  colour:
     $file: ../favouriteColour.txt
 ```
 
@@ -125,11 +125,11 @@ Helm can reference files from a chart, but it is limited to files placed within 
 
 A value node can contain an array of file references by using the `$files` syntax. The result is an array of strings. One for the content of each file.
 
-The file references can be expressed as absolut `path:` elements or `glob:` elements. Globing uses the Go Match syntax, [filepath.Match](https://pkg.go.dev/path/filepath#Match)
+The file references are relative to the current config file. The `path` field supports glob patterns using the Go Match syntax, [filepath.Match](https://pkg.go.dev/path/filepath#Match). The resulting array will reflect the order returned by the filesystem, which may not be deterministic.
 
 ```yaml
 values:
-  Colours:
+  colours:
     $files: 
       - path: ../files/favouriteColour.txt
       - path: ../files/uglyColour.txt
@@ -194,7 +194,7 @@ Examples
       value: myrepo/myapp:1.2.3
 ```
 
-2) Add an annotation (note escaped slash)
+1) Add an annotation (note escaped slash)
 
 ```yaml
 - target:
@@ -206,7 +206,7 @@ Examples
       value: helmer
 ```
 
-3) Reuse a value from your configuration via `$ref`
+1) Reuse a value from your configuration via `$ref`
 
 ```yaml
 values:
@@ -230,7 +230,7 @@ Behavior and best practices
 - Patches are applied after Helm template rendering and before writing manifests to the target.
 - Patches are applied in the order they appear. If multiple patches target the same path, later patches overwrite earlier ones.
 - JSON Pointer array indices are position-based; using array indices can be fragile if upstream charts reorder array elements. When possible, prefer changing chart values or replacing larger subtrees instead of relying on numeric array indices.
-- If a `replace`/`remove` operation targets a missing path, the patch will fail. 
+- If a `replace`/`remove` operation targets a missing path, the patch will fail.
 
 Error handling
 
@@ -300,6 +300,6 @@ This can be useful in, for example, en ArgoCD applications that needs to referen
 
 Values can be set as globals or in a chart. There are also the built-in value defaults in Helm charts themselves. Priority among these is: Chart > Globals > Chart defaults. Global values included from another configuration will have lower priority than those in the including configuration.
 
-# License
+## License
 
 Helmer is released under the Apache 2.0 license. See [LICENSE](LICENSE)
