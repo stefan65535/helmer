@@ -13,8 +13,17 @@ import (
 )
 
 type Patch struct {
-	Target        map[string]any  `yaml:"target"`
+	Target        PatchTarget     `yaml:"target"`
 	PatchJSON6902 yamlpatch.Patch `yaml:"patch"` // Note: yamlpatch.Patch is a slice of yamlpatch.Operation.
+}
+
+type PatchTarget struct {
+	APIVersion string `yaml:"apiVersion,omitempty"`
+	Group      string `yaml:"group,omitempty"`
+	Version    string `yaml:"version,omitempty"`
+	Kind       string `yaml:"kind,omitempty"`
+	Name       string `yaml:"name,omitempty"`
+	Namespace  string `yaml:"namespace,omitempty"`
 }
 
 func (p *Patch) Apply(manifests string, values map[string]any) (string, error) {
@@ -91,7 +100,37 @@ func (p *Patch) Apply(manifests string, values map[string]any) (string, error) {
 }
 
 // isTargetInManifest checks if the fragment exists in the document at root level.
-func isTargetInManifest(document map[string]any, fragment map[string]any) (bool, error) {
+func isTargetInManifest(document map[string]any, target PatchTarget) (bool, error) {
+	fragment := make(map[string]any)
+	if target.Group != "" {
+		groupVersion := target.Group
+		if target.Version != "" {
+			groupVersion += "/" + target.Version
+		}
+		fragment["apiVersion"] = groupVersion
+	} else if target.Version != "" {
+		fragment["apiVersion"] = target.Version
+	}
+	
+	if target.APIVersion != "" {
+		fragment["apiVersion"] = target.APIVersion
+	}
+
+	if target.Kind != "" {
+		fragment["kind"] = target.Kind
+	}
+
+	if target.Name != "" || target.Namespace != "" {
+		metadata := make(map[string]any)
+		if target.Name != "" {
+			metadata["name"] = target.Name
+		}
+		if target.Namespace != "" {
+			metadata["namespace"] = target.Namespace
+		}
+		fragment["metadata"] = metadata
+	}
+
 	changelog, err := diff.Diff(fragment, document)
 	if err != nil {
 		return false, err

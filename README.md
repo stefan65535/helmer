@@ -146,13 +146,14 @@ Here is an example how to render all colours in a template:
 
 ##### patches
 
-Patches are applied to rendered Kubernetes manifests using JSON Patch (RFC 6902). Each patch entry must identify which rendered resources it should target and then provide a JSON Patch array of operations. Typical selection fields are:
+Patches are applied to rendered Kubernetes manifests using JSON Patch (RFC 6902). Each patch entry must identify which rendered resources it should target and then provide a JSON Patch array of operations. The  target selection fields are:
 
-- `kind` — the Kubernetes Kind (e.g., Deployment, Service)
-- `name` — metadata.name of the resource
-- `namespace` — metadata.namespace (optional)
-- `apiVersion` — apiVersion of the resource (optional)
-- `labels` — a map of labels to match (optional; matches resources that contain all specified label keys/values)
+- `apiVersion` - apiVersion can also be expressed in seperate group and version elements.
+- `group`
+- `version`
+- `kind`
+- `name`
+- `namespace`
 
 A patch entry that matches multiple resources will be applied to each matching resource.
 
