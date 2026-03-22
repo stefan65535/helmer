@@ -71,8 +71,8 @@ func processConfig(path string) error {
 	}
 
 	domain.GlobalValues["Helmer"] = map[string]any{
-		"target": map[string]any{
-			"path": doc.Target.Path,
+		"Target": map[string]any{
+			"Path": doc.Target.Path,
 		},
 	}
 

@@ -284,7 +284,7 @@ target:
 ## Helmer values
 
 Helmer values are added to the global .Values in Helm under .Values.Helmer
-Currently only target.path is available
+Currently only Target.Path is available
 Example:
 
 Some chart:
@@ -292,7 +292,7 @@ Some chart:
 ```yaml
 ... som k8s kind
 spec:
-  path: {{ .Values.Helmer.target.path }}
+  path: {{ .Values.Helmer.Target.Path }}
 ```
 
 This can be useful in, for example, en ArgoCD applications that needs to reference the target path in a repository with freshly generated manifests.
