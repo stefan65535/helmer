@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	stdpath "path"
@@ -70,11 +71,22 @@ func processConfig(path string) error {
 		return err
 	}
 
+	var chartsValue []any
+	for _, chart := range doc.Charts {
+		value := map[string]any{
+			"TargetDir": chart.TargetDir,
+		}
+		chartsValue = append(chartsValue, value)
+	}
+
 	domain.GlobalValues["Helmer"] = map[string]any{
 		"Target": map[string]any{
 			"Path": doc.Target.Path,
 		},
+		"Charts": chartsValue,
 	}
+
+	fmt.Printf("Global values: %+v\n", domain.GlobalValues)
 
 	err = doc.RenderTarget()
 	if err != nil {

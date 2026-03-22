@@ -154,7 +154,7 @@ func (d *Document) RenderTarget() error {
 			if err != nil {
 				return err
 			}
-			d.Target.renderedReleases = append(d.Target.renderedReleases, release)
+			d.Target.renderedReleases = append(d.Target.renderedReleases, RenderedRelease{Release: release, TargetDir: chart.TargetDir})
 		}
 	}
 

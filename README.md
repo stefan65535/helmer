@@ -56,7 +56,7 @@ A chart references a Helm chart.
 
 - `path`: Where to find the chart. Currently, only local charts are supported.
 - `values`: Values to set for this chart. Any YAML valid in a Helm values.yaml file can be placed here and will override the chart's built-in defaults.
-- `targetName`: Set the target file name. If not set the chart name will be used.
+- `targetDir`: Set the name of the target directory. If not set the chart name will be used.
 
 Example:
 
@@ -284,18 +284,25 @@ target:
 ## Helmer values
 
 Helmer values are added to the global .Values in Helm under .Values.Helmer
-Currently only Target.Path is available
+
+- Target.Path Holds the path to the target directory
+- Charts An array of all charts found
+  - TargetDir The directory under Target.Path that will recieve the rendered manifests for this chart
+
 Example:
 
 Some chart:
 
 ```yaml
+{{- range .Values.Helmer.Charts }}
 ... som k8s kind
 spec:
-  path: {{ .Values.Helmer.Target.Path }}
+  path: {{ $.Values.Helmer.Target.Path }}/{{ .TargetDir }}
+...
+{{- end }}
 ```
 
-This can be useful in, for example, en ArgoCD applications that needs to reference the target path in a repository with freshly generated manifests.
+This can be useful in, for example, en ArgoCD applications that needs to reference the target path in a repository with generated manifests.
 
 ## Priority order for values
 

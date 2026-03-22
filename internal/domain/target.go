@@ -13,7 +13,12 @@ import (
 type Target struct {
 	Path string `yaml:"path"`
 
-	renderedReleases []*releasev1v1.Release
+	renderedReleases []RenderedRelease
+}
+
+type RenderedRelease struct {
+	Release   *releasev1v1.Release
+	TargetDir string
 }
 
 // fileCreated is a map that tracks whether a file with a given name has been created.
@@ -37,8 +42,8 @@ func (t *Target) write(baseDir string) error {
 // writeRelease writes the manifest of the given Helm release to a YAML file in the specified directory.
 // If the file already exists (tracked by the fileCreated map), it appends to the file; otherwise, it creates a new file.
 // The function ensures the target directory exists, handles file creation and opening, and writes the release manifest content.
-func writeRelease(dir string, release *releasev1v1.Release) error {
-	fileName := stdpath.Join(dir, release.Chart.Metadata.Name, "manifest.yaml")
+func writeRelease(dir string, release RenderedRelease) error {
+	fileName := stdpath.Join(dir, release.TargetDir, "manifest.yaml")
 	logger.Verbosef(3, "Writing %v", fileName)
 	absFileName, err := filepath.Abs(fileName)
 	if err != nil {
@@ -66,7 +71,7 @@ func writeRelease(dir string, release *releasev1v1.Release) error {
 	}
 	defer file.Close()
 
-	_, err = file.Write([]byte(release.Manifest))
+	_, err = file.Write([]byte(release.Release.Manifest))
 	if err != nil {
 		return err
 	}
