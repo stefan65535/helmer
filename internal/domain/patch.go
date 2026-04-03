@@ -111,7 +111,7 @@ func isTargetInManifest(document map[string]any, target PatchTarget) (bool, erro
 	} else if target.Version != "" {
 		fragment["apiVersion"] = target.Version
 	}
-	
+
 	if target.APIVersion != "" {
 		fragment["apiVersion"] = target.APIVersion
 	}
