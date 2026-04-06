@@ -7,7 +7,7 @@ import (
 	stdpath "path"
 
 	"github.com/stefan65535/helmer/internal/logger"
-	releasev1v1 "helm.sh/helm/v4/pkg/release/v1"
+	releasev1 "helm.sh/helm/v4/pkg/release/v1"
 )
 
 type Target struct {
@@ -17,7 +17,7 @@ type Target struct {
 }
 
 type RenderedRelease struct {
-	Release   *releasev1v1.Release
+	Release   *releasev1.Release
 	TargetDir string
 }
 

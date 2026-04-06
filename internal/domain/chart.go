@@ -8,10 +8,11 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"github.com/stefan65535/helmer/internal/utils"
 	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/chart"
 	"helm.sh/helm/v4/pkg/chart/common"
-	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
-	"helm.sh/helm/v4/pkg/chart/v2/loader"
+	"helm.sh/helm/v4/pkg/chart/loader"
 	releasev1 "helm.sh/helm/v4/pkg/release/v1"
 )
 
@@ -23,7 +24,7 @@ type Chart struct {
 	TargetDir    string      `yaml:"targetDir,omitempty"`
 	AuxTemplates []*Template `yaml:"auxTemplates,omitempty"`
 
-	loadedChart *chartv2.Chart
+	charter chart.Charter
 }
 
 type Template struct {
@@ -38,32 +39,38 @@ type RenderedChart struct {
 	Manifests []string
 }
 
-var chartCash = make(map[string]*chartv2.Chart)
+var charterCash = make(map[string]chart.Charter)
 
 func (c *Chart) load(configPath string) error {
-	if c.loadedChart == nil {
+	if c.charter == nil {
 		absPath, err := filepath.Abs(stdpath.Join(configPath, c.Path))
 		if err != nil {
 			return err
 		}
 
-		var chart *chartv2.Chart
+		var charter chart.Charter
 
 		// Try to get the chart from cache
-		if cachedChart, ok := chartCash[absPath]; ok {
-			chart = cachedChart
+		if cachedCharter, ok := charterCash[absPath]; ok {
+			charter = cachedCharter
 		} else {
-			chart, err = loader.Load(absPath)
+			charter, err = loader.Load(absPath)
 			if err != nil {
 				return err
 			}
-			chartCash[absPath] = chart
+
+			charterCash[absPath] = charter
 		}
-		c.loadedChart = chart
+		c.charter = charter
 	}
 
 	if c.TargetDir == "" {
-		c.TargetDir = c.loadedChart.Metadata.Name
+			accessor, err := chart.NewAccessor(c.charter)
+			if err != nil {
+				return err
+			}
+
+			c.TargetDir = accessor.Name()
 	}
 
 	for _, auxTemplate := range c.AuxTemplates {
@@ -76,7 +83,7 @@ func (c *Chart) load(configPath string) error {
 		if err != nil {
 			return err
 		}
-		
+
 		auxTemplate.loadedTemplate = auxTemplateContent
 	}
 
@@ -84,7 +91,7 @@ func (c *Chart) load(configPath string) error {
 }
 
 func (c *Chart) render(values map[string]any) (*releasev1.Release, error) {
-	if c.loadedChart == nil {
+	if c.charter == nil {
 		return nil, errors.New("chart not loaded")
 	}
 
@@ -109,9 +116,9 @@ func (c *Chart) render(values map[string]any) (*releasev1.Release, error) {
 		install.Namespace = GlobalRelease.Namespace
 	}
 
-	localValues := loader.MergeMaps(values, c.Values)
+	localValues := utils.MergeMaps(values, c.Values)
 
-	releaser, err := install.Run(c.loadedChart, localValues)
+	releaser, err := install.Run(c.charter, localValues)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +146,7 @@ func (c *Chart) renderAuxTemplates(values map[string]any) (map[string][]byte, er
 	renderedAuxTemplates := make(map[string][]byte)
 
 	for _, auxTemplate := range c.AuxTemplates {
-		localValues := loader.MergeMaps(values, auxTemplate.Values)
+		localValues := utils.MergeMaps(values, auxTemplate.Values)
 
 		tmpl, err := template.New("tpl").Parse(string(auxTemplate.loadedTemplate))
 		if err != nil {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/stefan65535/helmer/internal/logger"
-	"helm.sh/helm/v4/pkg/chart/v2/loader"
+	"github.com/stefan65535/helmer/internal/utils"
 )
 
 type Document struct {
@@ -51,7 +51,7 @@ func LoadDocument(parent *Document, path string) (*Document, error) {
 	doc.parent = parent
 	doc.path = path
 
-	GlobalValues = loader.MergeMaps(doc.Values, GlobalValues)
+	GlobalValues = utils.MergeMaps(doc.Values, GlobalValues)
 
 	if err = doc.ResolveDependencies(path); err != nil {
 		return nil, err
