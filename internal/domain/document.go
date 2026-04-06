@@ -15,7 +15,7 @@ type Document struct {
 	Charts       []*Chart     `yaml:"charts"`
 	Values       Values       `yaml:"values"`
 	Capabilities Capabilities `yaml:"capabilities,omitempty"`
-	Release      Release      `yaml:"release,omitempty"`
+	Release      Release      `yaml:"release,omitempty"` // TODO remove?
 	Target       *Target      `yaml:"target,omitempty"`
 
 	parent *Document

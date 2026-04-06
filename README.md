@@ -44,11 +44,13 @@ helmer --help
 
 ### includes
 
-The `includes` element contains a list of path references to other configuration files.
+The `includes` element contains a list of include elements.
 
-The `path` argument tells Helmer where to find the configuration to include. The path is relative to the current configuration file.
+#### include
 
-Included configuration files may contain only includes, charts, values, capabilities, and release directives. Targets are not allowed.
+- `path`: Tells Helmer where to find the configuration to include. The path is relative to the current configuration file.
+
+Included configuration files may contain only `includes`, `charts`, `values`, `capabilities`, and `release` directives. `target` is not allowed.
 
 ### charts
 
@@ -57,6 +59,8 @@ A chart references a Helm chart.
 - `path`: Where to find the chart. Currently, only local charts are supported.
 - `values`: Values to set for this chart. Any YAML valid in a Helm values.yaml file can be placed here and will override the chart's built-in defaults.
 - `targetDir`: Set the name of the target directory. If not set the chart name will be used.
+- `patches`: Apply pathces after the rendering is done. This can be usefull referencing external charts that aren't fully parameterized to your liking.
+- `auxTemplates`: Add a set of auxiliary templates to the rendering process. Patches can only do so much, sometimes you need to add complete templates and manifests to an external chart. auxTemplates lets you do this.
 
 Example:
 
@@ -66,10 +70,6 @@ charts:
     values:
       colour: Yellow
 ```
-
-### Helm objects
-
-Helm objects correspond to the Helm built-in objects as described by [Helm Built-in Objects](https://helm.sh/docs/chart_template_guide/builtin_objects)
 
 #### values
 
@@ -144,7 +144,7 @@ Here is an example how to render all colours in a template:
 {{- end }}  
 ```
 
-##### patches
+#### patches
 
 Patches are applied to rendered Kubernetes manifests using JSON Patch (RFC 6902). Each patch entry must identify which rendered resources it should target and then provide a JSON Patch array of operations. The  target selection fields are:
 
@@ -268,7 +268,13 @@ release:
 
 release can be set as a global directive and on chart basis. If both are set the chart will override the global value.
 
-### target
+#### auxTemplate
+
+- `path` Path to a Go template
+
+Values are available just as if the template was within the chart. However special Helm functiona are not. The template is executed using the Go template lib allone.
+
+#### target
 
 A `target` directive controls the generation of manifests from the defined set of charts and Helm objects in the configuration.
 
@@ -295,14 +301,15 @@ Some chart:
 
 ```yaml
 {{- range .Values.Helmer.Charts }}
-... som k8s kind
+---
+apiVersion: acme.com/v1
+kind: Kindly
 spec:
   path: {{ $.Values.Helmer.Target.Path }}/{{ .TargetDir }}
-...
 {{- end }}
 ```
 
-This can be useful in, for example, en ArgoCD applications that needs to reference the target path in a repository with generated manifests.
+This can be useful in, for example, an ArgoCD applications that needs to reference the target path in a repository with generated manifests.
 
 ## Priority order for values
 

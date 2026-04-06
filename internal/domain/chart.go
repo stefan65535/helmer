@@ -1,9 +1,12 @@
 package domain
 
 import (
+	"bytes"
 	"errors"
+	"os"
 	stdpath "path"
 	"path/filepath"
+	"text/template"
 
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/chart/common"
@@ -13,13 +16,21 @@ import (
 )
 
 type Chart struct {
-	Path      string   `yaml:"path"`
-	Patches   []*Patch `yaml:"patches"`
-	Values    Values   `yaml:"values"`
-	Release   Release  `yaml:"release,omitempty"`
-	TargetDir string   `yaml:"targetDir,omitempty"`
+	Path         string      `yaml:"path"`
+	Patches      []*Patch    `yaml:"patches"`
+	Values       Values      `yaml:"values"`
+	Release      Release     `yaml:"release,omitempty"`
+	TargetDir    string      `yaml:"targetDir,omitempty"`
+	AuxTemplates []*Template `yaml:"auxTemplates,omitempty"`
 
 	loadedChart *chartv2.Chart
+}
+
+type Template struct {
+	Path   string `yaml:"path"`
+	Values Values `yaml:"values"`
+
+	loadedTemplate []byte
 }
 
 type RenderedChart struct {
@@ -53,6 +64,20 @@ func (c *Chart) load(configPath string) error {
 
 	if c.TargetDir == "" {
 		c.TargetDir = c.loadedChart.Metadata.Name
+	}
+
+	for _, auxTemplate := range c.AuxTemplates {
+		auxAbsPath, err := filepath.Abs(stdpath.Join(configPath, auxTemplate.Path))
+		if err != nil {
+			return err
+		}
+
+		auxTemplateContent, err := os.ReadFile(auxAbsPath)
+		if err != nil {
+			return err
+		}
+		
+		auxTemplate.loadedTemplate = auxTemplateContent
 	}
 
 	return nil
@@ -97,7 +122,44 @@ func (c *Chart) render(values map[string]any) (*releasev1.Release, error) {
 		return nil, err
 	}
 
+	renderedAuxTemplates, err := c.renderAuxTemplates(localValues)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, auxManifest := range renderedAuxTemplates {
+		release.Manifest = release.Manifest + "---\n"
+		release.Manifest = release.Manifest + string(auxManifest)
+	}
+
 	return release, nil
+}
+
+func (c *Chart) renderAuxTemplates(values map[string]any) (map[string][]byte, error) {
+	renderedAuxTemplates := make(map[string][]byte)
+
+	for _, auxTemplate := range c.AuxTemplates {
+		localValues := loader.MergeMaps(values, auxTemplate.Values)
+
+		tmpl, err := template.New("tpl").Parse(string(auxTemplate.loadedTemplate))
+		if err != nil {
+			return nil, err
+		}
+
+		values := map[string]any{
+			"Release": c.Release,
+			"Values":  localValues,
+		}
+
+		var rendered bytes.Buffer
+		if err := tmpl.Execute(&rendered, values); err != nil {
+			return nil, err
+		}
+
+		renderedAuxTemplates[auxTemplate.Path] = rendered.Bytes()
+	}
+
+	return renderedAuxTemplates, nil
 }
 
 func applyPatches(release *releasev1.Release, patches []*Patch, values map[string]any) error {
