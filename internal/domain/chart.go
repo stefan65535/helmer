@@ -56,7 +56,12 @@ func (c *Chart) load(configPath string) error {
 		if cachedCharter, ok := charterCash[absPath]; ok {
 			charter = cachedCharter
 		} else {
-			charter, err = loader.Load(absPath)
+			loader, err := loader.Loader(absPath)
+			if err != nil {
+				return err
+			}
+
+			charter, err = loader.Load()
 			if err != nil {
 				return err
 			}
