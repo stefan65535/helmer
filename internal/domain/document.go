@@ -150,7 +150,7 @@ func (d *Document) RenderTarget() error {
 		for _, chart := range docCharts {
 			logger.Verbosef(3, "Rendering chart %v", chart.Path)
 
-			release, err := chart.render(GlobalValues)
+			release, err := chart.render()
 			if err != nil {
 				return err
 			}

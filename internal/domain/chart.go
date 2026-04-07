@@ -13,6 +13,7 @@ import (
 	"helm.sh/helm/v4/pkg/chart"
 	"helm.sh/helm/v4/pkg/chart/common"
 	"helm.sh/helm/v4/pkg/chart/loader"
+
 	releasev1 "helm.sh/helm/v4/pkg/release/v1"
 )
 
@@ -39,6 +40,7 @@ type RenderedChart struct {
 	Manifests []string
 }
 
+// TODO chash charts instead of charters? Charts are what we load from disk and render, charters are what Helm uses to render. Charts could also include the loaded charter and rendered release to avoid having to pass them around
 var charterCash = make(map[string]chart.Charter)
 
 func (c *Chart) load(configPath string) error {
@@ -65,12 +67,12 @@ func (c *Chart) load(configPath string) error {
 	}
 
 	if c.TargetDir == "" {
-			accessor, err := chart.NewAccessor(c.charter)
-			if err != nil {
-				return err
-			}
+		accessor, err := chart.NewAccessor(c.charter)
+		if err != nil {
+			return err
+		}
 
-			c.TargetDir = accessor.Name()
+		c.TargetDir = accessor.Name()
 	}
 
 	for _, auxTemplate := range c.AuxTemplates {
@@ -90,7 +92,7 @@ func (c *Chart) load(configPath string) error {
 	return nil
 }
 
-func (c *Chart) render(values map[string]any) (*releasev1.Release, error) {
+func (c *Chart) render() (*releasev1.Release, error) {
 	if c.charter == nil {
 		return nil, errors.New("chart not loaded")
 	}
@@ -116,20 +118,20 @@ func (c *Chart) render(values map[string]any) (*releasev1.Release, error) {
 		install.Namespace = GlobalRelease.Namespace
 	}
 
-	localValues := utils.MergeMaps(values, c.Values)
+	values := utils.MergeMaps(GlobalValues, c.Values)
 
-	releaser, err := install.Run(c.charter, localValues)
+	releaser, err := install.Run(c.charter, values)
 	if err != nil {
 		return nil, err
 	}
 
 	release := releaser.(*releasev1.Release) // Helm does not provide any public help to deal with Releaser. releaserToV1Release exists in get_values.go but it's a private function.
 
-	if err = applyPatches(release, c.Patches, localValues); err != nil {
+	if err = applyPatches(release, c.Patches, values); err != nil {
 		return nil, err
 	}
 
-	renderedAuxTemplates, err := c.renderAuxTemplates(localValues)
+	renderedAuxTemplates, err := c.renderAuxTemplates(values)
 	if err != nil {
 		return nil, err
 	}
