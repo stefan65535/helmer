@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
 	stdpath "path"
@@ -45,8 +44,6 @@ var templateCmd = &cobra.Command{
 
 // processConfig loads a config file at path and writes its targets.
 func processConfig(path string) error {
-	domain.GlobalValues = domain.Values{}
-
 	// TODO add option to set from command line
 	domain.GlobalRelease = domain.Release{
 		Name:      "release-name",      // This is the default name Helm uses if none is provided.
@@ -56,7 +53,7 @@ func processConfig(path string) error {
 	// TODO add option to set from command line
 	domain.GlobalCapabilities = domain.Capabilities{}
 
-	doc, err := domain.LoadDocument(nil, path)
+	doc, err := domain.LoadDocument(nil, path, 0)
 	if err != nil {
 		return err
 	}
@@ -70,23 +67,6 @@ func processConfig(path string) error {
 	if err != nil {
 		return err
 	}
-
-	var chartsValue []any
-	for _, chart := range doc.Charts {
-		value := map[string]any{
-			"TargetDir": chart.TargetDir,
-		}
-		chartsValue = append(chartsValue, value)
-	}
-
-	domain.GlobalValues["Helmer"] = map[string]any{
-		"Target": map[string]any{
-			"Path": doc.Target.Path,
-		},
-		"Charts": chartsValue,
-	}
-
-	fmt.Printf("Global values: %+v\n", domain.GlobalValues)
 
 	err = doc.RenderTarget()
 	if err != nil {
@@ -114,7 +94,6 @@ func walkDir(path string, exts []string, fileFn func(path string) error) error {
 
 			for _, e := range exts {
 				if ext == e {
-					logger.Verbosef(1, "Reading config %v", path)
 					err := fileFn(path)
 					if err != nil {
 						return err

@@ -52,7 +52,7 @@ func (c *Chart) load(configPath string) error {
 
 		var charter chart.Charter
 
-		// Try to get the chart from cache
+		// Try to get the charter from cache
 		if cachedCharter, ok := charterCash[absPath]; ok {
 			charter = cachedCharter
 		} else {

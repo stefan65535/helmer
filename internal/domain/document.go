@@ -28,7 +28,9 @@ type Include struct {
 	loadedDocument *Document // Loaded document after resolving the include
 }
 
-func LoadDocument(parent *Document, path string) (*Document, error) {
+func LoadDocument(parent *Document, path string, indent int) (*Document, error) {
+	logger.Verbosef(indent, "Loading document %v", path)
+
 	// Check for circular includes
 	for p := parent; p != nil; p = p.parent {
 		if p.path == path {
@@ -53,7 +55,7 @@ func LoadDocument(parent *Document, path string) (*Document, error) {
 
 	GlobalValues = utils.MergeMaps(doc.Values, GlobalValues)
 
-	if err = doc.ResolveDependencies(path); err != nil {
+	if err = doc.ResolveDependencies(path, indent+1); err != nil {
 		return nil, err
 	}
 
@@ -63,14 +65,15 @@ func LoadDocument(parent *Document, path string) (*Document, error) {
 }
 
 // ResolveDependencies loads includes and charts
-func (d *Document) ResolveDependencies(path string) error {
-	if err := d.resolveIncludes(path); err != nil {
+func (d *Document) ResolveDependencies(path string, indent int) error {
+	if err := d.loadCharts(stdpath.Dir(path), indent); err != nil {
 		return err
 	}
 
-	if err := d.loadCharts(stdpath.Dir(path)); err != nil {
+	if err := d.resolveIncludes(path, indent); err != nil {
 		return err
 	}
+
 
 	if err := d.Values.ResolveValueFileAndExternalRefs(stdpath.Dir(path)); err != nil {
 		return err
@@ -79,11 +82,16 @@ func (d *Document) ResolveDependencies(path string) error {
 	return nil
 }
 
-func (d *Document) resolveIncludes(basePath string) error {
+func (d *Document) resolveIncludes(basePath string, indent int) error {
+	if len(d.Includes) == 0 {
+		return nil
+	}
+
+	logger.Verbose(indent, "Loading includes")
 	for _, include := range d.Includes {
 		path := stdpath.Join(stdpath.Dir(basePath), include.Path)
 
-		includedDocument, err := LoadDocument(d, path)
+		includedDocument, err := LoadDocument(d, path, indent+1)
 		if err != nil {
 			return fmt.Errorf("error resolving includes in %v:\n%w", basePath, err)
 		}
@@ -98,8 +106,14 @@ func (d *Document) resolveIncludes(basePath string) error {
 	return nil
 }
 
-func (d *Document) loadCharts(path string) error {
+func (d *Document) loadCharts(path string, indent int) error {
+	if len(d.Charts) == 0 {
+		return nil
+	}
+
+	logger.Verbose(indent, "Loading charts")
 	for _, chart := range d.Charts {
+		logger.Verbosef(indent +1, "Loading chart %v", chart.Path)
 		if err := chart.load(path); err != nil {
 			return err
 		}
@@ -144,18 +158,30 @@ func (d *Document) ResolveChartValueRefs() error {
 func (d *Document) RenderTarget() error {
 	docCharts := d.CollectCharts()
 
-	if d.Target != nil {
-		logger.Verbosef(2, "Processing target %v in %v", d.Target.Path, d.path)
+	GlobalValues["Helmer"].(map[string]any)["Target"] = map[string]any{
+		"Path": d.Target.Path,
+	}
 
-		for _, chart := range docCharts {
-			logger.Verbosef(3, "Rendering chart %v", chart.Path)
+	for chart := range docCharts {
+		charts := GlobalValues["Helmer"].(map[string]any)["Charts"].([]any)
+		charts = append(charts, map[string]any{
+			"TargetDir": docCharts[chart].TargetDir,
+		})
 
-			release, err := chart.render()
-			if err != nil {
-				return err
-			}
-			d.Target.renderedReleases = append(d.Target.renderedReleases, RenderedRelease{Release: release, TargetDir: chart.TargetDir})
+		GlobalValues["Helmer"].(map[string]any)["Charts"] = charts
+	}
+
+	logger.Verbosef(1, "Rendering target %v", d.Target.Path)
+	logger.Verbosef(2, "Global values: %+v", GlobalValues)
+
+	for _, chart := range docCharts {
+		logger.Verbosef(2, "Rendering chart %v", chart.Path)
+
+		release, err := chart.render()
+		if err != nil {
+			return err
 		}
+		d.Target.renderedReleases = append(d.Target.renderedReleases, RenderedRelease{Release: release, TargetDir: chart.TargetDir})
 	}
 
 	return nil

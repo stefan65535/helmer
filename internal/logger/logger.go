@@ -27,18 +27,18 @@ func init() {
 }
 
 func Verbose(indent int, msg string) {
-	Log(VERBOSE, indent, msg)
+	log(VERBOSE, indent, msg)
 }
 
 func Verbosef(indent int, format string, a ...any) {
-	Log(VERBOSE, indent, fmt.Sprintf(format, a...))
+	log(VERBOSE, indent, fmt.Sprintf(format, a...))
 }
 
 func Error(err error) {
-	Log(ERROR, 0, err.Error())
+	log(ERROR, 0, err.Error())
 }
 
-func Log(level Level, indent int, msg string) {
+func log(level Level, indent int, msg string) {
 	if Default.Level == VERBOSE {
 		print(indent, msg)
 	} else {
