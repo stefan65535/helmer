@@ -42,25 +42,27 @@ helmer --help
 
 ## Configuration file
 
-### includes
+- `includes:` A list of [include](#include) elements.
+- `charts:` A list of [chart](#chart) elements.
+- `values:` A [values](#values) element. Defines global values. Can be overriden on a chart basis.
+- `capabilities:` [capabilities](#capabilities) sets the anticipated capabilities of the intended Kubernetes cluster.
+- `release:` [release](#release) Defines global release properties. Can be overriden on a chart basis.
+- `target:` The [target](#target) element controles where rendered manifests will be written. target is only allowed to be present on the root configuration. Inclued configuration files must not contain aditional targets.
 
-The `includes` element contains a list of include elements.
-
-#### include
+### include
 
 - `path`: Tells Helmer where to find the configuration to include. The path is relative to the current configuration file.
 
-Included configuration files may contain only `includes`, `charts`, `values`, `capabilities`, and `release` directives. `target` is not allowed.
-
-### charts
+### chart
 
 A chart references a Helm chart.
 
-- `path`: Where to find the chart. Currently, only local charts are supported.
-- `values`: Values to set for this chart. Any YAML valid in a Helm values.yaml file can be placed here and will override the chart's built-in defaults.
-- `targetDir`: Set the name of the target directory. If not set the chart name will be used.
-- `patches`: Apply pathces after the rendering is done. This can be usefull referencing external charts that aren't fully parameterized to your liking.
-- `auxTemplates`: Add a set of auxiliary templates to the rendering process. Patches can only do so much, sometimes you need to add complete templates and manifests to an external chart. auxTemplates lets you do this.
+- `path:` Where to find the chart. Currently, only local charts are supported.
+- `values:` A [values](#values) element. If a value is present int the global values the chart value will take precedence.
+- `release:` A [release](#release) element
+- `targetDir:` Set the name of the target directory. If not set the chart name will be used.
+- `patches:` A list of [patch](#patch)
+- `auxTemplates:` A list of [auxTemplates](#auxtemplate) elements.
 
 Example:
 
@@ -71,82 +73,11 @@ charts:
       colour: Yellow
 ```
 
-#### values
+#### patch
 
-Values declare a set of global values that can be used for all charts. Any YAML valid as Helm values can be placed here.
+A patch is applied to rendered Kubernetes manifests using JSON Patch (RFC 6902). This can be usefull referencing external charts that aren't fully parameterized to your liking. Pathces are applied after the chart rendering is done.
 
-Example:
-
-```yaml
-values:
-  colour: Blue
-```
-
-##### $ref
-
-A value node can contain a reference to another value using the `$ref` notation. This is useful when working with third-party charts where you can't change the value names in the chart but still want to reuse values already present in your value set. It also lets you design charts that are unaware of your global values structure in the Helmer config and instead name chart fields after their location or function.
-
-The value of `$ref` uses the [JSON Pointer notation](https://tools.ietf.org/html/rfc6901). It is limited to URI fragments, i.e., it must start with `#`.
-
-References are resolved after all includes are processed. This lets you reference a field anywhere in the include tree.
-
-Example:
-
-Let's assume you have a chart with a value field called `FavouriteColor`. You could introduce a value field with that name directly, but perhaps there is already a field in your Helmer config that plays the role of a favourite colour. Instead of changing your chart template, a `$ref` in the `FavouriteColor` field will pick it up for you.
-
-```yaml
-charts:
-  - path: "../../charts/mychart"
-    values:
-      favouriteColor:
-        $ref: "#/colour"
-```
-
-```yaml
-values:
-  colour: Blue
-```
-
-##### $file reference
-
-A value node can contain a file reference by using the `$file` syntax.
-
-```yaml
-values:
-  colour:
-    $file: ../favouriteColour.txt
-```
-
-This will convert the node to a scalar whose value is the content of the file.
-
-Helm can reference files from a chart, but it is limited to files placed within the chart. A Helmer `$file` reference, on the other hand, can reference any file on the host.
-
-##### $files reference
-
-A value node can contain an array of file references by using the `$files` syntax. The result is an array of strings. One for the content of each file.
-
-The file references are relative to the current config file. The `path` field supports glob patterns using the Go Match syntax, [filepath.Match](https://pkg.go.dev/path/filepath#Match). The resulting array will reflect the order returned by the filesystem, which may not be deterministic.
-
-```yaml
-values:
-  colours:
-    $files: 
-      - path: ../files/favouriteColour.txt
-      - path: ../files/uglyColour.txt
-      - path: ../files/allColours/*.txt
-```
-
-Here is an example how to render all colours in a template:
-
-```yaml
-{{- range .Values.Colours }}
-    {{ . }}
-{{- end }}  
-```
-
-#### patches
-
-Patches are applied to rendered Kubernetes manifests using JSON Patch (RFC 6902). Each patch entry must identify which rendered resources it should target and then provide a JSON Patch array of operations. The  target selection fields are:
+Each patch entry must identify which rendered resources it should target and then provide a JSON Patch array of operations. The  target selection fields are:
 
 - `apiVersion` - apiVersion can also be expressed in seperate group and version elements.
 - `group`
@@ -239,18 +170,101 @@ Error handling
 
 This should give you the tools to target individual rendered resources and apply precise JSON Patch edits while still using `$ref` to keep patches data-driven and reusable.
 
-#### capabilities
+#### auxTemplate
 
-This provides information about what capabilities the Kubernetes cluster supports.
+Patches can only do so much, sometimes you need to add complete templates and manifests to an external chart. auxTemplates lets you do this.
 
-As Helmer doesn't talk to your Kubernetes cluster, it can't extract cluster information by itself. Often this is not a problem when running Helm on the client side, but in the rare case you are using charts that reference the built-in object `Capabilities`, its values can be set explicitly through this directive.
+- `path` Path to a Go template
 
-- `apiVersions:` Sets the `Capabilities.APIVersions`.
-- `kubeVersion.version:` Sets the Kubernetes `Capabilities.KubeVersion.Version`.
-- `kubeVersion.major:` Sets the `Capabilities.KubeVersion.Major`.
-- `kubeVersion.minor:` Sets the `Capabilities.KubeVersion.Minor`.
+Values are available just as if the template was within the chart. However special Helm functiona are not. The template is executed using the Go template lib allone.
 
-#### release
+### values
+
+Values declare a set of Helm values. Any YAML valid as Helm values can be placed here.
+
+Example:
+
+```yaml
+values:
+  colour: Blue
+```
+
+#### $ref
+
+A value node can contain a reference to another value using the `$ref` notation. This is useful when working with third-party charts where you can't change the value names in the chart but still want to reuse values already present in your value set. It also lets you design charts that are unaware of your global values structure in the Helmer config and instead name chart fields after their location or function.
+
+The value of `$ref` uses the [JSON Pointer notation](https://tools.ietf.org/html/rfc6901). It is limited to URI fragments, i.e., it must start with `#`.
+
+References are resolved after all includes are processed. This lets you reference a field anywhere in the include tree.
+
+Example:
+
+Let's assume you have a chart with a value field called `FavouriteColor`. You could introduce a value field with that name directly, but perhaps there is already a field in your Helmer config that plays the role of a favourite colour. Instead of changing your chart template, a `$ref` in the `FavouriteColor` field will pick it up for you.
+
+```yaml
+charts:
+  - path: "../../charts/mychart"
+    values:
+      favouriteColor:
+        $ref: "#/colour"
+```
+
+```yaml
+values:
+  colour: Blue
+```
+
+#### $file reference
+
+A value node can contain a file reference by using the `$file` syntax.
+
+```yaml
+values:
+  colour:
+    $file: ../favouriteColour.txt
+```
+
+This will convert the node to a scalar whose value is the content of the file.
+
+Helm can reference files from a chart, but it is limited to files placed within the chart. A Helmer `$file` reference, on the other hand, can reference any file on the host.
+
+#### $files reference
+
+A value node can contain an array of file references by using the `$files` syntax. The result is an array of strings. One for the content of each file.
+
+The file references are relative to the current config file. The `path` field supports glob patterns using the Go Match syntax, [filepath.Match](https://pkg.go.dev/path/filepath#Match). The resulting array will reflect the order returned by the filesystem, which may not be deterministic.
+
+```yaml
+values:
+  colours:
+    $files: 
+      - path: ../files/favouriteColour.txt
+      - path: ../files/uglyColour.txt
+      - path: ../files/allColours/*.txt
+```
+
+Here is an example how to render all colours in a template:
+
+```yaml
+{{- range .Values.Colours }}
+    {{ . }}
+{{- end }}  
+```
+
+### target
+
+A `target` directive controls the generation of manifests from the defined set of charts and Helm objects in the configuration.
+
+- `path:` tells Helmer where to put the generated manifests.
+
+Example:
+
+```yaml
+target:
+  path: write/manifests/to/this/file
+```
+
+### release
 
 Sets various attributes in the Helm built-in object `.Release`.
 
@@ -268,24 +282,16 @@ release:
 
 release can be set as a global directive and on chart basis. If both are set the chart will override the global value.
 
-#### auxTemplate
+### capabilities
 
-- `path` Path to a Go template
+This provides information about what capabilities the Kubernetes cluster supports.
 
-Values are available just as if the template was within the chart. However special Helm functiona are not. The template is executed using the Go template lib allone.
+As Helmer doesn't talk to your Kubernetes cluster, it can't extract cluster information by itself. Often this is not a problem when running Helm on the client side, but in the rare case you are using charts that reference the built-in object `Capabilities`, its values can be set explicitly through this directive.
 
-#### target
-
-A `target` directive controls the generation of manifests from the defined set of charts and Helm objects in the configuration.
-
-- `path:` tells Helmer where to put the generated manifests.
-
-Example:
-
-```yaml
-target:
-  path: write/manifests/to/this/file
-```
+- `apiVersions:` Sets the `Capabilities.APIVersions`.
+- `kubeVersion.version:` Sets the Kubernetes `Capabilities.KubeVersion.Version`.
+- `kubeVersion.major:` Sets the `Capabilities.KubeVersion.Major`.
+- `kubeVersion.minor:` Sets the `Capabilities.KubeVersion.Minor`.
 
 ## Helmer values
 
