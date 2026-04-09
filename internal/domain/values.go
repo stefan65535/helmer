@@ -32,6 +32,7 @@ type Release struct {
 	Name      string `yaml:"name"`
 	Namespace string `yaml:"namespace"`
 }
+
 func InitGlobalValues() {
 	GlobalValues = map[string]any{
 		"Helmer": map[string]any{
@@ -41,6 +42,15 @@ func InitGlobalValues() {
 			"Charts": []any{},
 		},
 	}
+}
+
+type HelmerValues struct {
+	Target HelmerTarget  `yaml:"Target"`
+}
+
+type HelmerTarget struct {
+	Path    string   `yaml:"Path"`
+	SubDirs []string `yaml:"SubDirs"`
 }
 
 func setGlobalCapsAndRelease(doc *Document) {

@@ -74,7 +74,6 @@ func (d *Document) ResolveDependencies(path string, indent int) error {
 		return err
 	}
 
-
 	if err := d.Values.ResolveValueFileAndExternalRefs(stdpath.Dir(path)); err != nil {
 		return err
 	}
@@ -113,7 +112,7 @@ func (d *Document) loadCharts(path string, indent int) error {
 
 	logger.Verbose(indent, "Loading charts")
 	for _, chart := range d.Charts {
-		logger.Verbosef(indent +1, "Loading chart %v", chart.Path)
+		logger.Verbosef(indent+1, "Loading chart %v", chart.Path)
 		if err := chart.load(path); err != nil {
 			return err
 		}
@@ -158,18 +157,33 @@ func (d *Document) ResolveChartValueRefs() error {
 func (d *Document) RenderTarget() error {
 	docCharts := d.CollectCharts()
 
-	GlobalValues["Helmer"].(map[string]any)["Target"] = map[string]any{
-		"Path": d.Target.Path,
+	helmerValues := HelmerValues{
+		Target: HelmerTarget{
+			Path: d.Target.Path,
+		},
+	}
+	for _, chart := range docCharts {
+		for _, sd := range helmerValues.Target.SubDirs {
+			if sd == chart.TargetDir {
+				goto SkipAppend
+			}
+		}
+		helmerValues.Target.SubDirs = append(helmerValues.Target.SubDirs, chart.TargetDir)
+	SkipAppend:
 	}
 
-	for chart := range docCharts {
-		charts := GlobalValues["Helmer"].(map[string]any)["Charts"].([]any)
-		charts = append(charts, map[string]any{
-			"TargetDir": docCharts[chart].TargetDir,
-		})
-
-		GlobalValues["Helmer"].(map[string]any)["Charts"] = charts
+	hvDoc, err := yaml.Marshal(helmerValues)
+	if err != nil {
+		return fmt.Errorf("error marshaling helmer values: %w", err)
 	}
+
+	var hv any
+	err = yaml.Unmarshal(hvDoc, &hv)
+	if err != nil {
+		return fmt.Errorf("error unmarshaling helmer values: %w", err)
+	}
+	GlobalValues["Helmer"] = hv
+
 
 	logger.Verbosef(1, "Rendering target %v", d.Target.Path)
 	logger.Verbosef(2, "Global values: %+v", GlobalValues)

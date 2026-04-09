@@ -297,21 +297,21 @@ As Helmer doesn't talk to your Kubernetes cluster, it can't extract cluster info
 
 Helmer values are added to the global .Values in Helm under .Values.Helmer
 
-- Target.Path Holds the path to the target directory
-- Charts An array of all charts found
-  - TargetDir The directory under Target.Path that will recieve the rendered manifests for this chart
+- Target
+  - Path Holds the path to the target directory
+  - SubDirs An array of directory names. This is where redered manifests ends up.
 
 Example:
 
 Some chart:
 
 ```yaml
-{{- range .Values.Helmer.Charts }}
+{{- range .Values.Helmer.Target.SubDir }}
 ---
 apiVersion: acme.com/v1
 kind: Kindly
 spec:
-  path: {{ $.Values.Helmer.Target.Path }}/{{ .TargetDir }}
+  path: {{ $.Values.Helmer.Target.Path }}/{{ . }}
 {{- end }}
 ```
 
