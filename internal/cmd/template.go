@@ -44,6 +44,8 @@ var templateCmd = &cobra.Command{
 
 // processConfig loads a config file at path and writes its targets.
 func processConfig(path string) error {
+	domain.InitGlobalValues()
+
 	// TODO add option to set from command line
 	domain.GlobalRelease = domain.Release{
 		Name:      "release-name",      // This is the default name Helm uses if none is provided.

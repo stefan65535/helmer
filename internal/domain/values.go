@@ -15,17 +15,6 @@ var GlobalValues Values
 var GlobalCapabilities Capabilities
 var GlobalRelease Release
 
-func init() {
-	GlobalValues = map[string]any{
-		"Helmer": map[string]any{
-			"Target": map[string]any{
-				"Path": "",
-			},
-			"Charts": []any{},
-		},
-	}
-}
-
 type Values map[string]any // TODO Do we need this to be a custom type? We could also just use map[string]any directly. The only reason to have this as a custom type would be to add helper functions on it, but we don't have any yet.
 
 type Capabilities struct {
@@ -42,6 +31,16 @@ type KubeVersion struct {
 type Release struct {
 	Name      string `yaml:"name"`
 	Namespace string `yaml:"namespace"`
+}
+func InitGlobalValues() {
+	GlobalValues = map[string]any{
+		"Helmer": map[string]any{
+			"Target": map[string]any{
+				"Path": "",
+			},
+			"Charts": []any{},
+		},
+	}
 }
 
 func setGlobalCapsAndRelease(doc *Document) {
