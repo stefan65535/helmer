@@ -42,7 +42,7 @@ helmer --help
 
 ## Configuration file
 
-- `includes:` A list of [include](#include) elements.
+- `includes:` A list of [include](#include) elements. 
 - `charts:` A list of [chart](#chart) elements.
 - `values:` A [values](#values) element. Defines global values. Can be overriden on a chart basis.
 - `capabilities:` [capabilities](#capabilities) sets the anticipated capabilities of the intended Kubernetes cluster.
@@ -51,7 +51,7 @@ helmer --help
 
 ### include
 
-- `path`: Tells Helmer where to find the configuration to include. The path is relative to the current configuration file.
+- `path`: Tells Helmer where to find the configuration to include. The path is relative to the current configuration file. The field supports glob patterns using the Go Match syntax, [filepath.Match](https://pkg.go.dev/path/filepath#Match). 
 
 ### chart
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	stdpath "path"
+	"path/filepath"
 
 	"github.com/goccy/go-yaml"
 	"github.com/stefan65535/helmer/internal/logger"
@@ -24,8 +25,8 @@ type Document struct {
 }
 
 type Include struct {
-	Path           string    `yaml:"path"`
-	loadedDocument *Document // Loaded document after resolving the include
+	Path            string      `yaml:"path"`
+	loadedDocuments []*Document // Loaded documents after resolving the include
 }
 
 func LoadDocument(parent *Document, path string, indent int) (*Document, error) {
@@ -90,16 +91,23 @@ func (d *Document) resolveIncludes(basePath string, indent int) error {
 	for _, include := range d.Includes {
 		path := stdpath.Join(stdpath.Dir(basePath), include.Path)
 
-		includedDocument, err := LoadDocument(d, path, indent+1)
+		files, err := filepath.Glob(path)
 		if err != nil {
-			return fmt.Errorf("error resolving includes in %v:\n%w", basePath, err)
+			return fmt.Errorf("resolving path %v failed. Cause: %v", path, err)
 		}
 
-		if includedDocument.Target != nil {
-			return fmt.Errorf("included config %v contains a target, which is not supported", path)
-		}
+		for _, file := range files {
+			loadedDocument, err := LoadDocument(d, file, indent+1)
+			if err != nil {
+				return fmt.Errorf("error resolving includes in %v:\n%w", basePath, err)
+			}
 
-		include.loadedDocument = includedDocument
+			if loadedDocument.Target != nil {
+				return fmt.Errorf("included config %v contains a target, which is not supported", file)
+			}
+
+			include.loadedDocuments = append(include.loadedDocuments, loadedDocument)
+		}
 	}
 
 	return nil
@@ -131,7 +139,9 @@ func (d *Document) CollectCharts() []*Chart {
 	charts = append(charts, d.Charts...)
 
 	for _, include := range d.Includes {
-		charts = append(charts, include.loadedDocument.CollectCharts()...)
+		for _, loadedDoc := range include.loadedDocuments {
+			charts = append(charts, loadedDoc.CollectCharts()...)
+		}
 	}
 
 	return charts
@@ -145,9 +155,10 @@ func (d *Document) ResolveChartValueRefs() error {
 	}
 
 	for _, include := range d.Includes {
-		if err := include.loadedDocument.ResolveChartValueRefs(); err != nil {
-
-			return err
+		for _, loadedDoc := range include.loadedDocuments {
+			if err := loadedDoc.ResolveChartValueRefs(); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -183,7 +194,6 @@ func (d *Document) RenderTarget() error {
 		return fmt.Errorf("error unmarshaling helmer values: %w", err)
 	}
 	GlobalValues["Helmer"] = hv
-
 
 	logger.Verbosef(1, "Rendering target %v", d.Target.Path)
 	logger.Verbosef(2, "Global values: %+v", GlobalValues)
