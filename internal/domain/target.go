@@ -44,7 +44,7 @@ func (t *Target) write(baseDir string) error {
 // The function ensures the target directory exists, handles file creation and opening, and writes the release manifest content.
 func writeRelease(dir string, release RenderedRelease) error {
 	fileName := stdpath.Join(dir, release.TargetDir, "manifest.yaml")
-	
+
 	logger.Verbosef(2, "Writing manifest %v", fileName)
 	absFileName, err := filepath.Abs(fileName)
 	if err != nil {

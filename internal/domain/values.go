@@ -45,7 +45,7 @@ func InitGlobalValues() {
 }
 
 type HelmerValues struct {
-	Target HelmerTarget  `yaml:"Target"`
+	Target HelmerTarget `yaml:"Target"`
 }
 
 type HelmerTarget struct {
