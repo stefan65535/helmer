@@ -6,6 +6,7 @@ import (
 	"os"
 	stdpath "path"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/stefan65535/helmer/internal/utils"
@@ -181,14 +182,25 @@ func applyPatches(release *releasev1.Release, patches []*Patch, values map[strin
 		return nil
 	}
 
+	patchInfo := &strings.Builder{}
+	patchInfo.WriteString("# Patches applied:\n")
+
 	for _, patch := range patches {
 		newManifest, err := patch.Apply(release.Manifest, values)
 		if err != nil {
 			return err
 		}
 
-		release.Manifest = "# Patches applied to: " + patch.Target.Kind + " \n" + newManifest
+		patchInfo.WriteString("#   - Target: " + patch.Target.Kind + "\n")
+		patchInfo.WriteString("#     Path: \n")
+		for _, patch := range patch.PatchJSON6902 {
+			patchInfo.WriteString("#         - " + patch.Path.String() + "\n")
+		}
+
+		release.Manifest = newManifest
 	}
+
+	release.Manifest = patchInfo.String() + release.Manifest
 
 	return nil
 }
