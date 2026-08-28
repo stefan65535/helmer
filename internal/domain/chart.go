@@ -27,6 +27,7 @@ type Chart struct {
 	TargetDir    string      `yaml:"targetDir,omitempty"`
 	AuxTemplates []*Template `yaml:"auxTemplates,omitempty"`
 
+	source *Document
 	charter chart.Charter
 }
 
@@ -100,7 +101,7 @@ func (c *Chart) load(configPath string) error {
 	return nil
 }
 
-func (c *Chart) render(d *Document) (*releasev1.Release, error) {
+func (c *Chart) render() (*releasev1.Release, error) {
 	if c.charter == nil {
 		return nil, errors.New("chart not loaded")
 	}
@@ -136,7 +137,7 @@ func (c *Chart) render(d *Document) (*releasev1.Release, error) {
 	release := releaser.(*releasev1.Release) // Helm does not provide any public help to deal with Releaser. releaserToV1Release exists in get_values.go but it's a private function.
 
 	chartInfo := &strings.Builder{}
-	chartInfo.WriteString(fmt.Sprintf("# Config: %v\n", d.Path))
+	chartInfo.WriteString(fmt.Sprintf("# Config: %v\n", c.source.Path))
 	chartInfo.WriteString(fmt.Sprintf("# Chart: %v\n", c.Path))
 
 	if err = applyPatches(release, c.Patches, values); err != nil {

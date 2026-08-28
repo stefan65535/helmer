@@ -54,6 +54,10 @@ func LoadDocument(parent *Document, path string, indent int) (*Document, error) 
 	doc.parent = parent
 	doc.Path = path
 
+	for _, chart := range doc.Charts {
+		chart.source = &doc
+	}
+
 	GlobalValues = utils.MergeMaps(doc.Values, GlobalValues)
 
 	if err = doc.ResolveDependencies(path, indent+1); err != nil {
@@ -201,7 +205,7 @@ func (d *Document) RenderTarget() error {
 	for _, chart := range docCharts {
 		logger.Verbosef(2, "Rendering chart %v", chart.Path)
 
-		release, err := chart.render(d)
+		release, err := chart.render()
 		if err != nil {
 			return err
 		}
