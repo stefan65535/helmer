@@ -100,7 +100,7 @@ func (c *Chart) load(configPath string) error {
 	return nil
 }
 
-func (c *Chart) render() (*releasev1.Release, error) {
+func (c *Chart) render(d *Document) (*releasev1.Release, error) {
 	if c.charter == nil {
 		return nil, errors.New("chart not loaded")
 	}
@@ -136,6 +136,7 @@ func (c *Chart) render() (*releasev1.Release, error) {
 	release := releaser.(*releasev1.Release) // Helm does not provide any public help to deal with Releaser. releaserToV1Release exists in get_values.go but it's a private function.
 
 	chartInfo := &strings.Builder{}
+	chartInfo.WriteString(fmt.Sprintf("# Config: %v\n", d.Path))
 	chartInfo.WriteString(fmt.Sprintf("# Chart: %v\n", c.Path))
 
 	if err = applyPatches(release, c.Patches, values); err != nil {
@@ -196,15 +197,16 @@ func applyPatches(release *releasev1.Release, patches []*Patch, values map[strin
 		if err != nil {
 			return err
 		}
+		patchInfo.WriteString("#   - Target:\n")
 		if patch.Target.Kind != "" {
-			patchInfo.WriteString(fmt.Sprintf("#     Kind: %v\n", patch.Target.Kind))
+			patchInfo.WriteString(fmt.Sprintf("#       Kind: %v\n", patch.Target.Kind))
 		}
 		if patch.Target.Name != "" {
-			patchInfo.WriteString(fmt.Sprintf("#     Name: %v\n", patch.Target.Name))
+			patchInfo.WriteString(fmt.Sprintf("#       Name: %v\n", patch.Target.Name))
 		}
 		if patch.Target.Namespace != "" {
-			patchInfo.WriteString(fmt.Sprintf("#     Namespace: %v\n", patch.Target.Namespace))
-		}	
+			patchInfo.WriteString(fmt.Sprintf("#       Namespace: %v\n", patch.Target.Namespace))
+		}
 		patchInfo.WriteString("#     Path:\n")
 		for _, patch := range patch.PatchJSON6902 {
 			patchInfo.WriteString(fmt.Sprintf("#       - %v\n", patch.Path.String()))

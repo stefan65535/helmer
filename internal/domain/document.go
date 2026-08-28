@@ -20,7 +20,7 @@ type Document struct {
 	Target       *Target      `yaml:"target,omitempty"`
 
 	parent *Document
-	path   string // Path to the config file, used for detecting circular includes
+	Path   string // Path to the config file, used for detecting circular includes
 
 }
 
@@ -34,7 +34,7 @@ func LoadDocument(parent *Document, path string, indent int) (*Document, error) 
 
 	// Check for circular includes
 	for p := parent; p != nil; p = p.parent {
-		if p.path == path {
+		if p.Path == path {
 			return nil, fmt.Errorf("circular include detected: %v", path)
 		}
 	}
@@ -52,7 +52,7 @@ func LoadDocument(parent *Document, path string, indent int) (*Document, error) 
 		return nil, fmt.Errorf("error decoding %v:\n%w", path, err)
 	}
 	doc.parent = parent
-	doc.path = path
+	doc.Path = path
 
 	GlobalValues = utils.MergeMaps(doc.Values, GlobalValues)
 
@@ -201,7 +201,7 @@ func (d *Document) RenderTarget() error {
 	for _, chart := range docCharts {
 		logger.Verbosef(2, "Rendering chart %v", chart.Path)
 
-		release, err := chart.render()
+		release, err := chart.render(d)
 		if err != nil {
 			return err
 		}
