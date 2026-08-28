@@ -192,7 +192,7 @@ func applyPatches(release *releasev1.Release, patches []*Patch, values map[strin
 		}
 
 		patchInfo.WriteString("#   - Target: " + patch.Target.Kind + "\n")
-		patchInfo.WriteString("#     Path: \n")
+		patchInfo.WriteString("#     Path:\n")
 		for _, patch := range patch.PatchJSON6902 {
 			patchInfo.WriteString("#         - " + patch.Path.String() + "\n")
 		}
