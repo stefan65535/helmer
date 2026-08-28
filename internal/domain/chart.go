@@ -32,7 +32,8 @@ type Template struct {
 	Path   string `yaml:"path"`
 	Values Values `yaml:"values"`
 
-	loadedTemplate []byte
+	loadedTemplate   []byte
+	renderedTemplate []byte
 }
 
 type RenderedChart struct {
@@ -136,28 +137,27 @@ func (c *Chart) render() (*releasev1.Release, error) {
 		return nil, err
 	}
 
-	renderedAuxTemplates, err := c.renderAuxTemplates(values)
+	err = c.renderAuxTemplates(values)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, auxManifest := range renderedAuxTemplates {
+	for _, auxTemplate := range c.AuxTemplates {
 		release.Manifest = release.Manifest + "---\n"
-		release.Manifest = release.Manifest + string(auxManifest)
+		release.Manifest = release.Manifest + "# Source: " + auxTemplate.Path + "\n"
+		release.Manifest = release.Manifest + string(auxTemplate.renderedTemplate)
 	}
 
 	return release, nil
 }
 
-func (c *Chart) renderAuxTemplates(values map[string]any) (map[string][]byte, error) {
-	renderedAuxTemplates := make(map[string][]byte)
-
+func (c *Chart) renderAuxTemplates(values map[string]any) error {
 	for _, auxTemplate := range c.AuxTemplates {
 		localValues := utils.MergeMaps(values, auxTemplate.Values)
 
 		tmpl, err := template.New("tpl").Parse(string(auxTemplate.loadedTemplate))
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		values := map[string]any{
@@ -167,13 +167,13 @@ func (c *Chart) renderAuxTemplates(values map[string]any) (map[string][]byte, er
 
 		var rendered bytes.Buffer
 		if err := tmpl.Execute(&rendered, values); err != nil {
-			return nil, err
+			return err
 		}
 
-		renderedAuxTemplates[auxTemplate.Path] = rendered.Bytes()
+		auxTemplate.renderedTemplate = rendered.Bytes()
 	}
 
-	return renderedAuxTemplates, nil
+	return nil
 }
 
 func applyPatches(release *releasev1.Release, patches []*Patch, values map[string]any) error {
@@ -186,7 +186,8 @@ func applyPatches(release *releasev1.Release, patches []*Patch, values map[strin
 		if err != nil {
 			return err
 		}
-		release.Manifest = newManifest
+
+		release.Manifest = "# Patches applied to: " + patch.Target.Kind + " \n" + newManifest
 	}
 
 	return nil
