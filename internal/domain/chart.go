@@ -3,6 +3,7 @@ package domain
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	stdpath "path"
 	"path/filepath"
@@ -134,9 +135,14 @@ func (c *Chart) render() (*releasev1.Release, error) {
 
 	release := releaser.(*releasev1.Release) // Helm does not provide any public help to deal with Releaser. releaserToV1Release exists in get_values.go but it's a private function.
 
+	chartInfo := &strings.Builder{}
+	chartInfo.WriteString(fmt.Sprintf("# Chart: %v\n", c.Path))
+
 	if err = applyPatches(release, c.Patches, values); err != nil {
 		return nil, err
 	}
+
+	release.Manifest = chartInfo.String() + release.Manifest
 
 	err = c.renderAuxTemplates(values)
 	if err != nil {
@@ -190,11 +196,18 @@ func applyPatches(release *releasev1.Release, patches []*Patch, values map[strin
 		if err != nil {
 			return err
 		}
-
-		patchInfo.WriteString("#   - Target: " + patch.Target.Kind + "\n")
+		if patch.Target.Kind != "" {
+			patchInfo.WriteString(fmt.Sprintf("#     Kind: %v\n", patch.Target.Kind))
+		}
+		if patch.Target.Name != "" {
+			patchInfo.WriteString(fmt.Sprintf("#     Name: %v\n", patch.Target.Name))
+		}
+		if patch.Target.Namespace != "" {
+			patchInfo.WriteString(fmt.Sprintf("#     Namespace: %v\n", patch.Target.Namespace))
+		}	
 		patchInfo.WriteString("#     Path:\n")
 		for _, patch := range patch.PatchJSON6902 {
-			patchInfo.WriteString("#         - " + patch.Path.String() + "\n")
+			patchInfo.WriteString(fmt.Sprintf("#       - %v\n", patch.Path.String()))
 		}
 
 		release.Manifest = newManifest
