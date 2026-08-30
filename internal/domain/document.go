@@ -5,6 +5,7 @@ import (
 	"os"
 	stdpath "path"
 	"path/filepath"
+	"slices"
 
 	"github.com/goccy/go-yaml"
 	"github.com/stefan65535/helmer/internal/logger"
@@ -186,6 +187,8 @@ func (d *Document) RenderTarget() error {
 		helmerValues.Target.SubDirs = append(helmerValues.Target.SubDirs, chart.TargetDir)
 	SkipAppend:
 	}
+
+	slices.Sort(helmerValues.Target.SubDirs)
 
 	hvDoc, err := yaml.Marshal(helmerValues)
 	if err != nil {
