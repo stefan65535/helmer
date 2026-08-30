@@ -101,6 +101,10 @@ func (d *Document) resolveIncludes(basePath string, indent int) error {
 			return fmt.Errorf("resolving path %v failed. Cause: %v", path, err)
 		}
 
+		if len(files) == 0 {
+			return fmt.Errorf("include file not found: %v", path)
+		}
+
 		for _, file := range files {
 			loadedDocument, err := LoadDocument(d, file, indent+1)
 			if err != nil {
