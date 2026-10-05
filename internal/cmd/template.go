@@ -60,10 +60,11 @@ func processConfig(path string) error {
 		return err
 	}
 
-	err = domain.GlobalValues.ResolveValueRefs()
+	v, err := domain.ResolveValueRefs(domain.GlobalValues)
 	if err != nil {
 		return err
 	}
+	domain.GlobalValues = v
 
 	err = doc.ResolveChartValueRefs()
 	if err != nil {

@@ -70,12 +70,20 @@ func setGlobalCapsAndRelease(doc *Document) {
 	}
 }
 
-func (h Values) ResolveValueRefs() error {
-	if err := resolveValueRefs(h); err != nil {
-		return err
+func ResolveValueRefs(v map[string]any) (map[string]any, error) {
+	b := map[string]any{}
+	b["values"] = v
+
+	if err := resolveValueRefs(b); err != nil {
+		return nil, err
 	}
 
-	return nil
+	v, ok := b["values"].(map[string]any)
+	if !ok {
+		return nil, errors.New("values: must be a yaml object")
+	}
+
+	return v, nil
 }
 
 // resolveValueRefs resolves references pointing to the values structure
@@ -87,6 +95,9 @@ func resolveValueRefs(nodes map[string]any) error {
 
 		if mapNode, ok := nodes[i].(map[string]any); ok {
 			if childNode, ok := mapNode["$ref"]; ok {
+				if len(mapNode) > 1 {
+					return errors.New(`$ref field must be the only field in the yaml object`)
+				}
 				if ref, ok := childNode.(string); ok {
 					r, err := jsonreference.New(ref)
 					if err != nil {
@@ -133,8 +144,8 @@ func resolveValueRefsYamlSequence(parent string, node []any) error {
 	return nil
 }
 
-func (h Values) ResolveValueFileAndExternalRefs(basePath string) error {
-	if err := resolveValueFileAndExternalRefs(h, basePath); err != nil {
+func (v Values) ResolveValueFileAndExternalRefs(basePath string) error {
+	if err := resolveValueFileAndExternalRefs(v, basePath); err != nil {
 		return err
 	}
 

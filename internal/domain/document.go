@@ -158,9 +158,11 @@ func (d *Document) CollectCharts() []*Chart {
 
 func (d *Document) ResolveChartValueRefs() error {
 	for _, chart := range d.Charts {
-		if err := chart.Values.ResolveValueRefs(); err != nil {
+		v, err := ResolveValueRefs(chart.Values)
+		if err != nil {
 			return err
 		}
+		chart.Values = v
 	}
 
 	for _, include := range d.Includes {
