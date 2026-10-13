@@ -27,7 +27,7 @@ type Chart struct {
 	TargetDir    string      `yaml:"targetDir,omitempty"`
 	AuxTemplates []*Template `yaml:"auxTemplates,omitempty"`
 
-	source *Document
+	source  *Document
 	charter chart.Charter
 }
 
@@ -62,12 +62,12 @@ func (c *Chart) load(configPath string) error {
 		} else {
 			loader, err := loader.Loader(absPath)
 			if err != nil {
-				return err
+				return fmt.Errorf("Helm chart error: %v", err.Error())
 			}
 
 			charter, err = loader.Load()
 			if err != nil {
-				return err
+				return fmt.Errorf("Helm chart error: %v", err.Error())
 			}
 
 			charterCash[absPath] = charter
@@ -78,7 +78,7 @@ func (c *Chart) load(configPath string) error {
 	if c.TargetDir == "" {
 		accessor, err := chart.NewAccessor(c.charter)
 		if err != nil {
-			return err
+			return fmt.Errorf("Helm chart error: %v", err.Error())
 		}
 
 		c.TargetDir = accessor.Name()
