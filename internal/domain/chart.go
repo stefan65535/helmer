@@ -131,7 +131,7 @@ func (c *Chart) render() (*releasev1.Release, error) {
 
 	releaser, err := install.Run(c.charter, values)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Helm chart rendering error: %v",err.Error())	
 	}
 
 	release := releaser.(*releasev1.Release) // Helm does not provide any public help to deal with Releaser. releaserToV1Release exists in get_values.go but it's a private function.
