@@ -194,6 +194,10 @@ func resolveValueFileAndExternalRefs(nodes map[string]any, basePath string) erro
 										return fmt.Errorf("resolving path %v failed. Cause: %v", path, err)
 									}
 
+									if len(files) == 0 {
+										return fmt.Errorf("No file matching glob pattern: %v", path)
+									}
+
 									for _, file := range files {
 										bytes, err := os.ReadFile(file)
 										if err != nil {
