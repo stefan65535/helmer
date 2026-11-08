@@ -208,11 +208,19 @@ func (d *Document) RenderTarget() error {
 	}
 	GlobalValues["Helmer"] = hv
 
-	logger.Verbosef(1, "Rendering target %v", d.Target.Path)
-	logger.Verbosef(2, "Global values: %+v", GlobalValues)
+	logger.Verbosef(0, "Global values:")
+	yml, err:=yaml.Marshal(GlobalValues)
+	if err != nil {
+		return fmt.Errorf("error marshaling global values: %w", err)
+	}
+	logger.Verbosef(0, "---")
+	logger.Verbosef(0, "%+v", string(yml))
+	logger.Verbosef(0, "...")
+
+	logger.Verbosef(0, "Rendering target %v", d.Target.Path)
 
 	for _, chart := range docCharts {
-		logger.Verbosef(2, "Rendering chart %v", chart.Path)
+		logger.Verbosef(1, "Rendering chart %v", chart.Path)
 
 		release, err := chart.render()
 		if err != nil {
