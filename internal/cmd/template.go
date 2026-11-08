@@ -60,7 +60,15 @@ func processConfig(path string) error {
 		return err
 	}
 
-	v, err := domain.ResolveValueRefs(domain.GlobalValues)
+	logger.Verbosef(0, "Rendering value templates")
+	v, err := domain.RenderTemplatesInValues(domain.GlobalValues)
+	if err != nil {
+		return err
+	}
+	domain.GlobalValues = v
+
+	logger.Verbosef(0, "Resolving value references")
+	v, err = domain.ResolveValueRefs(domain.GlobalValues)
 	if err != nil {
 		return err
 	}

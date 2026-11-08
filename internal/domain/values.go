@@ -72,15 +72,15 @@ func setGlobalCapsAndRelease(doc *Document) {
 
 func ResolveValueRefs(v map[string]any) (map[string]any, error) {
 	b := map[string]any{}
-	b["values"] = v
+	b["Values"] = v
 
 	if err := resolveValueRefs(b); err != nil {
 		return nil, err
 	}
 
-	v, ok := b["values"].(map[string]any)
+	v, ok := b["Values"].(map[string]any)
 	if !ok {
-		return nil, errors.New("values: must be a yaml object")
+		return nil, errors.New("Values: must be a yaml object")
 	}
 
 	return v, nil
@@ -88,12 +88,12 @@ func ResolveValueRefs(v map[string]any) (map[string]any, error) {
 
 // resolveValueRefs resolves references pointing to the values structure
 func resolveValueRefs(nodes map[string]any) error {
-	for i := range nodes {
-		if err := resolveValueRefsYamlNode(i, nodes[i]); err != nil {
+	for nodeName := range nodes {
+		if err := resolveValueRefsYamlNode(nodeName, nodes[nodeName]); err != nil {
 			return err
 		}
 
-		if mapNode, ok := nodes[i].(map[string]any); ok {
+		if mapNode, ok := nodes[nodeName].(map[string]any); ok {
 			if childNode, ok := mapNode["$ref"]; ok {
 				if len(mapNode) > 1 {
 					return errors.New(`$ref field must be the only field in the yaml object`)
@@ -109,7 +109,7 @@ func resolveValueRefs(nodes map[string]any) error {
 						if err != nil {
 							return fmt.Errorf(`error evaluating reference "%v": %v`, ref, err)
 						}
-						nodes[i] = val
+						nodes[nodeName] = val
 					} else {
 						return errors.New(`$ref field only supports URI fragments pointing to local values`)
 					}

@@ -45,7 +45,7 @@ func (t *Target) write(baseDir string) error {
 func writeRelease(dir string, release RenderedRelease) error {
 	fileName := stdpath.Join(dir, release.TargetDir, "manifest.yaml")
 
-	logger.Verbosef(2, "Writing manifest %v", fileName)
+	logger.Verbosef(1, "Writing manifest %v", fileName)
 	absFileName, err := filepath.Abs(fileName)
 	if err != nil {
 		return err
