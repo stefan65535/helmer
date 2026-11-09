@@ -31,12 +31,12 @@ func renderTemplatesInValues(parent string, nodes map[string]any) error {
 		}
 
 		if mapNode, ok := nodes[nodeName].(map[string]any); ok {
-			if childNode, ok := mapNode["$template"]; ok {
+			if childNode, ok := mapNode["$tpl"]; ok {
 				if len(mapNode) > 1 {
-					return errors.New(`$template field must be the only field in the yaml object`)
+					return errors.New(`$tpl field must be the only field in the yaml object`)
 				}
 				if tpl, ok := childNode.(string); ok {
-					logger.Verbosef(1, "%v.%v.$template: %v", parent, nodeName, tpl)
+					logger.Verbosef(1, "%v.%v.$tpl: %v", parent, nodeName, tpl)
 
 					tpl, err := template.New("tpl").Option("missingkey=error").Parse(tpl)
 					if err != nil {
@@ -55,7 +55,7 @@ func renderTemplatesInValues(parent string, nodes map[string]any) error {
 					logger.Verbosef(2, "replaced with %v.%v: %v", parent, nodeName, buf.String())
 					nodes[nodeName] = buf.String()
 				} else {
-					return errors.New(`$template field must have string type`)
+					return errors.New(`$tpl field must have string type`)
 				}
 			}
 		}

@@ -251,7 +251,7 @@ Here is an example how to render all colours in a template:
 {{- end }}  
 ```
 
-#### $template
+#### $tpl
 
 A value can be rendered from a Go template. This can be useful if a third party Helm chart needs a value which in your configuration is split into multiple values.
 
@@ -260,7 +260,7 @@ values:
   topDomain: com
   subDomain: acme
   domain: 
-    $template: "{{ .Values.subDomain }}.{{ .Values.topDomain }}"
+    $tpl: "{{ .Values.subDomain }}.{{ .Values.topDomain }}"
 ```
 
 However, if you own the Helm chart, it's usually better to add more fine-grained values directly to the chart.
